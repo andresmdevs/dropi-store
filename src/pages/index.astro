@@ -1,0 +1,213 @@
+---
+import { getProducts, dropiConfigured, type DropiProduct } from '../lib/dropi';
+
+export const prerender = false;
+
+// Productos de demostración: el sitio se ve completo aunque aún no haya
+// credenciales de Dropi. Se reemplazan solos cuando configures la llave.
+const DEMO: DropiProduct[] = [
+  { id: 1, name: 'Audífonos Bluetooth Pro', sale_price: 79900, description: 'Cancelación de ruido, 30h de batería.' },
+  { id: 2, name: 'Smartwatch Fit 2', sale_price: 119900, description: 'Ritmo cardíaco, SpO2, notificaciones.' },
+  { id: 3, name: 'Cámara de Seguridad WiFi', sale_price: 89900, description: 'Visión nocturna, app móvil, 1080p.' },
+  { id: 4, name: 'Organizador de Cocina 8 pzs', sale_price: 49900, description: 'Acero inoxidable, antideslizante.' },
+  { id: 5, name: 'Lámpara LED Escritorio', sale_price: 39900, description: '3 tonos de luz, carga USB.' },
+  { id: 6, name: 'Mini Proyector Portátil', sale_price: 159900, description: 'HD, HDMI, ideal para películas.' },
+];
+
+let products: DropiProduct[] = DEMO;
+let usingDemo = true;
+let notice = '';
+
+if (dropiConfigured()) {
+  try {
+    const data: any = await getProducts();
+    const list: any[] = data?.objects ?? data?.products ?? data?.data ?? (Array.isArray(data) ? data : []);
+    if (Array.isArray(list) && list.length) {
+      products = list as DropiProduct[];
+      usingDemo = false;
+    } else {
+      notice = 'Dropi respondió sin productos; mostrando catálogo de ejemplo.';
+    }
+  } catch (e) {
+    notice = `No se pudo leer Dropi (${e instanceof Error ? e.message : e}); mostrando catálogo de ejemplo.`;
+  }
+}
+
+const cop = (n: number | undefined) =>
+  new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n ?? 0);
+
+const priceOf = (p: DropiProduct) => p.sale_price ?? p.price ?? 0;
+const imageOf = (p: DropiProduct) => p.gallery?.[0]?.url ?? p.gallery?.[0]?.urlS3 ?? '';
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mi Tienda · Pago contra entrega</title>
+    <meta name="description" content="Compra fácil con pago contra entrega en toda Colombia. Envíos 24-72h." />
+    <style>
+      :root {
+        --bg: #0b0f17; --card: #131b2a; --line: #1f2a3d;
+        --txt: #e7edf6; --muted: #93a1b8; --brand: #3b82f6; --ok: #22c55e;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--bg); color: var(--txt);
+        font: 16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+      header { padding: 20px 24px; border-bottom: 1px solid var(--line);
+        display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+      .brand { font-weight: 800; font-size: 20px; letter-spacing: -.3px; }
+      .badge { background: rgba(34,197,94,.15); color: var(--ok);
+        border: 1px solid rgba(34,197,94,.35); padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; }
+      main { max-width: 1100px; margin: 0 auto; padding: 24px; }
+      .hero { padding: 28px 0 8px; }
+      .hero h1 { font-size: 30px; margin: 0 0 6px; letter-spacing: -.5px; }
+      .hero p { color: var(--muted); margin: 0; }
+      .notice { margin: 16px 0; padding: 10px 14px; border: 1px dashed var(--line);
+        border-radius: 10px; color: var(--muted); font-size: 14px; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 16px; margin-top: 16px; }
+      .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+        overflow: hidden; display: flex; flex-direction: column; }
+      .thumb { aspect-ratio: 4/3; background: linear-gradient(135deg, #1b2740, #0f1726);
+        display: grid; place-items: center; color: var(--muted); font-size: 13px; }
+      .thumb img { width: 100%; height: 100%; object-fit: cover; }
+      .card .body { padding: 14px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+      .card h3 { margin: 0; font-size: 16px; }
+      .card .desc { color: var(--muted); font-size: 14px; flex: 1; }
+      .price { font-size: 18px; font-weight: 800; }
+      button { cursor: pointer; border: 0; border-radius: 10px; font-weight: 700; }
+      .buy { background: var(--brand); color: white; padding: 10px 12px; }
+      .buy:hover { filter: brightness(1.08); }
+      footer { color: var(--muted); text-align: center; padding: 32px; font-size: 13px; }
+      dialog { border: 1px solid var(--line); background: var(--card); color: var(--txt);
+        border-radius: 16px; width: min(460px, 92vw); padding: 0; }
+      dialog::backdrop { background: rgba(0,0,0,.6); }
+      .dlg-head { padding: 16px 18px; border-bottom: 1px solid var(--line); display: flex;
+        justify-content: space-between; align-items: center; }
+      .dlg-body { padding: 18px; display: grid; gap: 12px; }
+      label { font-size: 13px; color: var(--muted); display: grid; gap: 4px; }
+      input, textarea { background: var(--bg); border: 1px solid var(--line); color: var(--txt);
+        border-radius: 10px; padding: 10px 12px; font: inherit; }
+      .x { background: transparent; color: var(--muted); font-size: 20px; }
+      .submit { background: var(--ok); color: #04210f; padding: 12px; }
+      .result { font-size: 14px; padding: 10px 12px; border-radius: 10px; display: none; }
+      .result.ok { display: block; background: rgba(34,197,94,.12); color: var(--ok); }
+      .result.err { display: block; background: rgba(239,68,68,.12); color: #fca5a5; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="brand">🛍️ Mi Tienda</div>
+      <span class="badge">✅ Pago contra entrega · Envíos 24-72h</span>
+    </header>
+
+    <main>
+      <section class="hero">
+        <h1>Productos con entrega a toda Colombia</h1>
+        <p>Pagas cuando recibes. Sin tarjetas, sin riesgos.</p>
+      </section>
+
+      {usingDemo && (
+        <p class="notice">
+          🧪 Catálogo de ejemplo (modo demo). {notice} Conecta tu <strong>DROPI_INTEGRATION_KEY</strong> para ver tus productos reales.
+        </p>
+      )}
+
+      <section class="grid">
+        {products.map((p) => (
+          <article class="card">
+            <div class="thumb">
+              {imageOf(p) ? <img src={imageOf(p)} alt={p.name} loading="lazy" /> : 'Sin imagen'}
+            </div>
+            <div class="body">
+              <h3>{p.name}</h3>
+              <p class="desc">{p.description ?? ''}</p>
+              <div class="price">{cop(priceOf(p))}</div>
+              <button
+                class="buy"
+                data-id={p.id}
+                data-name={p.name}
+                data-price={priceOf(p)}
+              >Pedir contra entrega</button>
+            </div>
+          </article>
+        ))}
+      </section>
+    </main>
+
+    <footer>Hecho con Astro + Dropi · Pago contra entrega</footer>
+
+    <dialog id="checkout">
+      <form method="dialog">
+        <div class="dlg-head">
+          <strong id="dlg-title">Finalizar pedido</strong>
+          <button class="x" value="cancel" aria-label="Cerrar">×</button>
+        </div>
+      </form>
+      <form id="order-form" class="dlg-body">
+        <input type="hidden" name="productId" />
+        <input type="hidden" name="price" />
+        <label>Nombre completo<input name="name" required placeholder="Ej: Ana Pérez" /></label>
+        <label>Teléfono / WhatsApp<input name="phone" required placeholder="Ej: 3001234567" /></label>
+        <label>Ciudad<input name="city" required placeholder="Ej: Medellín" /></label>
+        <label>Dirección<input name="address" required placeholder="Calle 1 # 2-3, barrio" /></label>
+        <label>Notas (opcional)<textarea name="notes" rows="2" placeholder="Color, talla, referencia..."></textarea></label>
+        <div id="result" class="result"></div>
+        <button type="submit" class="submit">Confirmar pedido (pago al recibir)</button>
+      </form>
+    </dialog>
+
+    <script>
+      const dialog = document.getElementById('checkout') as HTMLDialogElement;
+      const form = document.getElementById('order-form') as HTMLFormElement;
+      const title = document.getElementById('dlg-title') as HTMLElement;
+      const result = document.getElementById('result') as HTMLElement;
+
+      document.querySelectorAll<HTMLButtonElement>('.buy').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          form.reset();
+          result.className = 'result';
+          (form.elements.namedItem('productId') as HTMLInputElement).value = btn.dataset.id ?? '';
+          (form.elements.namedItem('price') as HTMLInputElement).value = btn.dataset.price ?? '';
+          title.textContent = `Pedir: ${btn.dataset.name ?? ''}`;
+          dialog.showModal();
+        });
+      });
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitBtn = form.querySelector('button[type=submit]') as HTMLButtonElement;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Enviando...';
+        result.className = 'result';
+        try {
+          const payload = Object.fromEntries(new FormData(form).entries());
+          const res = await fetch('/api/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          const data = await res.json();
+          if (data.ok) {
+            result.className = 'result ok';
+            result.textContent = data.demo
+              ? '✅ Pedido recibido (modo demo). ¡Listo para conectar Dropi real!'
+              : '✅ ¡Pedido creado en Dropi! Te contactaremos para coordinar la entrega.';
+            form.reset();
+          } else {
+            result.className = 'result err';
+            result.textContent = '⚠️ ' + (data.error ?? 'No se pudo crear el pedido.');
+          }
+        } catch (err) {
+          result.className = 'result err';
+          result.textContent = '⚠️ Error de red. Intenta de nuevo.';
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Confirmar pedido (pago al recibir)';
+        }
+      });
+    </script>
+  </body>
+</html>

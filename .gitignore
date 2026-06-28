@@ -1,0 +1,18 @@
+# build
+dist/
+.vercel/
+.astro/
+.output/
+
+# deps
+node_modules/
+
+# entorno (NUNCA subir credenciales)
+.env
+.env.local
+.env.*.local
+
+# sistema
+.DS_Store
+*.log
+npm-debug.log*
