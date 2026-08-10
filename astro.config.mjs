@@ -1,10 +1,8 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
-import vercel from '@astrojs/vercel';
 
-// SSR en Vercel: rutas on-demand por defecto (las páginas estáticas se pueden
-// marcar luego con `export const prerender = true` para SEO máximo).
+// Sitio 100% estático → se despliega GRATIS en Render Static Site o Azure SWA.
+// (El build genera /dist con HTML/CSS/JS servible por cualquier CDN.)
 export default defineConfig({
-  output: 'server',
-  adapter: vercel(),
+  output: 'static',
 });
