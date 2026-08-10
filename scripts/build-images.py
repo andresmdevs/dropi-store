@@ -100,42 +100,56 @@ def compose(cutout: Image.Image, size: int) -> Image.Image:
     return canvas.convert("RGB")
 
 
+def render_one(source: str, out_stem: str, remove_bg, force: bool) -> bool:
+    """Procesa una imagen de origen -> {stem}.webp (grande) y {stem}-sm.webp."""
+    lg_path = OUT_DIR / f"{out_stem}.webp"
+    sm_path = OUT_DIR / f"{out_stem}-sm.webp"
+    if lg_path.exists() and sm_path.exists() and not force:
+        log(f"  ✓  {out_stem} (ya existe)")
+        return True
+
+    raw = download(source)
+    original = Image.open(io.BytesIO(raw))
+    original.seek(0)  # GIF/animados: primer fotograma
+    original = original.convert("RGBA")
+
+    cutout = trim_transparent(remove_bg(original).convert("RGBA"))
+    if cutout.width < 40 or cutout.height < 40:
+        # El recorte dejó casi nada: mejor conservar la imagen original.
+        log(f"  ⚠  {out_stem}: recorte vacío, uso la imagen original")
+        cutout = original
+
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    compose(cutout, SIZE_LG).save(lg_path, "WEBP", quality=86, method=6)
+    compose(cutout, SIZE_SM).save(sm_path, "WEBP", quality=82, method=6)
+
+    kb = (lg_path.stat().st_size + sm_path.stat().st_size) / 1024
+    log(f"  ✅ {out_stem}  ({kb:.0f} KB)")
+    return True
+
+
 def process(product: dict, remove_bg, force: bool) -> bool:
+    """Procesa toda la galería del producto.
+
+    La primera imagen es la principal ({slug}.webp) y las siguientes se numeran
+    ({slug}-2.webp, {slug}-3.webp...) para alimentar la galería del detalle.
+    """
     slug = product["slug"]
     sources = product.get("sourceImages") or []
     if not sources:
         log(f"  ⏭  {slug}: sin imagen de origen")
         return False
 
-    lg_path = OUT_DIR / f"{slug}.webp"
-    sm_path = OUT_DIR / f"{slug}-sm.webp"
-    if lg_path.exists() and sm_path.exists() and not force:
-        log(f"  ✓  {slug} (ya existe)")
-        return True
+    done = 0
+    for index, source in enumerate(sources):
+        stem = slug if index == 0 else f"{slug}-{index + 1}"
+        try:
+            if render_one(source, stem, remove_bg, force):
+                done += 1
+        except Exception as exc:  # noqa: BLE001 - seguimos con las demás
+            log(f"  ❌ {stem}: {exc}")
 
-    try:
-        raw = download(sources[0])
-        original = Image.open(io.BytesIO(raw))
-        # Los GIF y otros formatos animados: usamos el primer fotograma.
-        original.seek(0)
-        original = original.convert("RGBA")
-
-        cutout = trim_transparent(remove_bg(original).convert("RGBA"))
-        if cutout.width < 40 or cutout.height < 40:
-            # El recorte falló (dejó casi nada): mejor usar la imagen original.
-            log(f"  ⚠  {slug}: recorte vacío, uso la imagen original")
-            cutout = original
-
-        OUT_DIR.mkdir(parents=True, exist_ok=True)
-        compose(cutout, SIZE_LG).save(lg_path, "WEBP", quality=86, method=6)
-        compose(cutout, SIZE_SM).save(sm_path, "WEBP", quality=82, method=6)
-
-        kb = (lg_path.stat().st_size + sm_path.stat().st_size) / 1024
-        log(f"  ✅ {slug}  ({kb:.0f} KB en total)")
-        return True
-    except Exception as exc:  # noqa: BLE001 - queremos continuar con los demás
-        log(f"  ❌ {slug}: {exc}")
-        return False
+    return done > 0
 
 
 def main() -> int:
