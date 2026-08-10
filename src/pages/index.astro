@@ -68,7 +68,7 @@ const waLink = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hola ${STOR
     <div class="featured-grid">
       {featured.map((product) => (
         <a class="card featured-card" href={`/producto/${product.slug}/`}>
-          <div class="thumb"><img src={product.images[0]} alt={product.name} loading="lazy" /></div>
+          <div class="thumb"><img src={product.thumb} alt={product.name} width="450" height="450" loading="lazy" decoding="async" /></div>
           <div class="body">
             <span class="cat">{product.category}</span>
             <h3>{product.name}</h3>
@@ -115,7 +115,7 @@ const waLink = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hola ${STOR
   <section class="grid" id="grid">
     {products.map((product) => (
       <a class="card" href={`/producto/${product.slug}/`} data-name={product.name.toLowerCase()} data-price={product.price} data-cat={product.category}>
-        <div class="thumb"><img src={product.images[0]} alt={product.name} loading="lazy" /></div>
+        <div class="thumb"><img src={product.thumb} alt={product.name} width="450" height="450" loading="lazy" decoding="async" /></div>
         <div class="body">
           <span class="cat">{product.category}</span>
           <h3>{product.name}</h3>

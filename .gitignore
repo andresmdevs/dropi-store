@@ -16,3 +16,7 @@ node_modules/
 .DS_Store
 *.log
 npm-debug.log*
+
+# pipeline de imágenes
+.venv-img/
+.cache/

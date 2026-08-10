@@ -18,7 +18,7 @@ const related = products.filter((item) => item.category === product.category && 
   <div class="detail">
     <div class="gallery">
       <div class="main-image">
-        <img id="main-img" src={product.images[0]} alt={product.name} loading="lazy" />
+        <img id="main-img" src={product.image} alt={product.name} width="900" height="900" fetchpriority="high" decoding="async" />
       </div>
       {product.images.length > 1 && (
         <div class="thumbs">
@@ -128,7 +128,7 @@ const related = products.filter((item) => item.category === product.category && 
       <div class="related-grid">
         {related.map((item) => (
           <a class="card" href={`/producto/${item.slug}/`}>
-            <div class="thumb"><img src={item.images[0]} alt={item.name} loading="lazy" /></div>
+            <div class="thumb"><img src={item.thumb} alt={item.name} width="450" height="450" loading="lazy" decoding="async" /></div>
             <div class="body">
               <span class="cat">{item.category}</span>
               <h3>{item.name}</h3>
