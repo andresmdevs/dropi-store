@@ -1,0 +1,64 @@
+---
+import Base from '../../layouts/Base.astro';
+import { products, getProduct } from '../../data/products.js';
+import { WHATSAPP, STORE_NAME } from '../../config.js';
+
+export function getStaticPaths() {
+  return products.map((p) => ({ params: { slug: p.slug }, props: { product: p } }));
+}
+
+const { product } = Astro.props;
+const cop = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
+---
+
+<Base title={`${product.name} · ${STORE_NAME}`} description={product.description.slice(0, 150)}>
+  <div class="detail">
+    <div class="gallery">
+      <img id="main-img" class="main" src={product.images[0]} alt={product.name} />
+      {product.images.length > 1 && (
+        <div class="thumbs">
+          {product.images.map((src) => (
+            <button class="thumb-btn" data-src={src} aria-label="Ver imagen"><img src={src} alt="" /></button>
+          ))}
+        </div>
+      )}
+    </div>
+
+    <div class="info">
+      <a href="/" class="back">← Volver a la tienda</a>
+      <div class="cat">{product.category}</div>
+      <h1>{product.name}</h1>
+      <div class="price">{cop(product.price)}</div>
+      <p class="desc">{product.description}</p>
+
+      <form id="order-form" class="order">
+        <strong>Pedir con pago contra entrega</strong>
+        <label>Nombre completo<input name="name" required placeholder="Ej: Ana Pérez" /></label>
+        <label>Teléfono<input name="phone" required placeholder="Ej: 3001234567" /></label>
+        <label>Ciudad<input name="city" required placeholder="Ej: Medellín" /></label>
+        <label>Dirección<input name="address" required placeholder="Calle 1 # 2-3, barrio" /></label>
+        <label>Notas (color, talla, referencia)<textarea name="notes" rows="2"></textarea></label>
+        <button type="submit" class="submit">🟢 Pedir por WhatsApp</button>
+      </form>
+    </div>
+  </div>
+
+  <script define:vars={{ WHATSAPP, STORE_NAME, product }}>
+    document.querySelectorAll('.thumb-btn').forEach((b) => {
+      b.addEventListener('click', () => { document.getElementById('main-img').src = b.dataset.src; });
+    });
+
+    const form = document.getElementById('order-form');
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const d = Object.fromEntries(new FormData(form).entries());
+      const precio = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(product.price);
+      const msg =
+        `¡Hola ${STORE_NAME}! Quiero pedir (pago contra entrega):\n\n` +
+        `🛍️ *${product.name}* — ${precio}\n\n` +
+        `👤 ${d.name}\n📱 ${d.phone}\n🏙️ ${d.city}\n📍 ${d.address}\n` +
+        (d.notes ? `📝 ${d.notes}\n` : '');
+      window.open(`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}`, '_blank');
+    });
+  </script>
+</Base>

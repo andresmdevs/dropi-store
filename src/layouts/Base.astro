@@ -1,0 +1,69 @@
+---
+import { STORE_NAME } from '../config.js';
+const { title = STORE_NAME, description = 'Pago contra entrega en toda Colombia. Envíos 24-72h.' } = Astro.props;
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <style is:global>
+      :root { --bg:#0b0f17; --card:#131b2a; --line:#1f2a3d; --txt:#e7edf6; --muted:#93a1b8; --brand:#3b82f6; --wa:#25d366; }
+      * { box-sizing: border-box; }
+      body { margin:0; background:var(--bg); color:var(--txt); font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+      a { color:inherit; text-decoration:none; }
+      header { padding:16px 24px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; position:sticky; top:0; background:rgba(11,15,23,.9); backdrop-filter:blur(8px); z-index:10; }
+      .brand { font-weight:800; font-size:20px; letter-spacing:-.3px; }
+      .badge { background:rgba(37,211,102,.15); color:var(--wa); border:1px solid rgba(37,211,102,.35); padding:4px 10px; border-radius:999px; font-size:13px; font-weight:600; }
+      main { max-width:1100px; margin:0 auto; padding:24px; }
+      button { cursor:pointer; border:0; border-radius:10px; font-weight:700; font:inherit; }
+      input, select, textarea { background:var(--bg); border:1px solid var(--line); color:var(--txt); border-radius:10px; padding:10px 12px; font:inherit; }
+      footer { color:var(--muted); text-align:center; padding:32px; font-size:13px; }
+
+      /* Home */
+      .hero { padding:20px 0 4px; }
+      .hero h1 { font-size:28px; margin:0 0 4px; letter-spacing:-.5px; }
+      .hero p { color:var(--muted); margin:0; }
+      .controls { display:flex; gap:10px; flex-wrap:wrap; margin:20px 0; }
+      .controls .search { flex:1; min-width:200px; }
+      .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:16px; }
+      .empty { color:var(--muted); padding:40px 0; text-align:center; grid-column:1/-1; }
+      .card { background:var(--card); border:1px solid var(--line); border-radius:14px; overflow:hidden; display:flex; flex-direction:column; transition:transform .12s, border-color .12s; }
+      .card:hover { transform:translateY(-2px); border-color:var(--brand); }
+      .card .thumb { aspect-ratio:4/3; background:#0f1726; }
+      .card .thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+      .card .body { padding:14px; display:flex; flex-direction:column; gap:6px; flex:1; }
+      .card .cat { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; }
+      .card h3 { margin:0; font-size:15px; }
+      .card .price { font-size:18px; font-weight:800; margin-top:auto; }
+      .card .cta { color:var(--brand); font-size:14px; font-weight:700; }
+
+      /* Detalle */
+      .detail { display:grid; grid-template-columns:1fr 1fr; gap:28px; }
+      @media (max-width:800px){ .detail { grid-template-columns:1fr; } }
+      .gallery .main { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:14px; border:1px solid var(--line); background:#0f1726; }
+      .thumbs { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+      .thumb-btn { padding:0; border:1px solid var(--line); border-radius:8px; overflow:hidden; width:64px; height:64px; background:#0f1726; }
+      .thumb-btn img { width:100%; height:100%; object-fit:cover; display:block; }
+      .back { color:var(--muted); font-size:14px; }
+      .info .cat { color:var(--muted); font-size:13px; text-transform:uppercase; letter-spacing:.4px; }
+      .info h1 { margin:6px 0; font-size:26px; }
+      .info .price { font-size:26px; font-weight:800; margin:8px 0 12px; }
+      .info .desc { color:#c7d2e0; }
+      .order { display:grid; gap:10px; margin-top:18px; padding:16px; border:1px solid var(--line); border-radius:14px; background:var(--card); }
+      .order label { font-size:13px; color:var(--muted); display:grid; gap:4px; }
+      .submit { background:var(--wa); color:#04210f; padding:12px; font-size:15px; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <a href="/" class="brand">🛍️ {STORE_NAME}</a>
+      <span class="badge">✅ Pago contra entrega · Envíos 24-72h</span>
+    </header>
+    <slot />
+    <footer>Hecho con Astro · Pago contra entrega en Colombia</footer>
+  </body>
+</html>

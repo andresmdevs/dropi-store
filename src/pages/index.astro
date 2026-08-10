@@ -1,140 +1,71 @@
 ---
-// Tienda estática (Camino 1): catálogo curado + checkout por WhatsApp (contra entrega).
-// Los pedidos llegan a tu WhatsApp y tú los creas en el panel de Dropi manualmente.
-// Cuando haya ventas, migramos a WooCommerce + Dropi automático (Camino 2, VPS).
-
-const STORE_NAME = 'Mi Tienda';
-// 👇 CAMBIA por tu número de WhatsApp con código de país, sin +, espacios ni guiones.
-//    Colombia = 57. Ej: 3001234567 -> "573001234567"
-const WHATSAPP = '573001234567';
-
-// Catálogo curado. Reemplaza por tus productos ganadores de Dropi (nombre, precio, desc, img).
-const PRODUCTS = [
-  { id: 'p1', name: 'Audífonos Bluetooth Pro', price: 79900, desc: 'Cancelación de ruido, 30h de batería.', img: '' },
-  { id: 'p2', name: 'Smartwatch Fit 2', price: 119900, desc: 'Ritmo cardíaco, SpO2, notificaciones.', img: '' },
-  { id: 'p3', name: 'Cámara de Seguridad WiFi', price: 89900, desc: 'Visión nocturna, app móvil, 1080p.', img: '' },
-  { id: 'p4', name: 'Organizador de Cocina 8 pzs', price: 49900, desc: 'Acero inoxidable, antideslizante.', img: '' },
-  { id: 'p5', name: 'Lámpara LED Escritorio', price: 39900, desc: '3 tonos de luz, carga USB.', img: '' },
-  { id: 'p6', name: 'Mini Proyector Portátil', price: 159900, desc: 'HD, HDMI, ideal para películas.', img: '' },
-];
+import Base from '../layouts/Base.astro';
+import { STORE_NAME } from '../config.js';
+import { products, categories } from '../data/products.js';
 
 const cop = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
 ---
 
-<!doctype html>
-<html lang="es">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{STORE_NAME} · Pago contra entrega</title>
-    <meta name="description" content="Compra fácil con pago contra entrega en toda Colombia. Envíos 24-72h." />
-    <style>
-      :root { --bg:#0b0f17; --card:#131b2a; --line:#1f2a3d; --txt:#e7edf6; --muted:#93a1b8; --brand:#3b82f6; --wa:#25d366; }
-      * { box-sizing: border-box; }
-      body { margin:0; background:var(--bg); color:var(--txt); font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
-      header { padding:20px 24px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
-      .brand { font-weight:800; font-size:20px; letter-spacing:-.3px; }
-      .badge { background:rgba(37,211,102,.15); color:var(--wa); border:1px solid rgba(37,211,102,.35); padding:4px 10px; border-radius:999px; font-size:13px; font-weight:600; }
-      main { max-width:1100px; margin:0 auto; padding:24px; }
-      .hero { padding:28px 0 8px; }
-      .hero h1 { font-size:30px; margin:0 0 6px; letter-spacing:-.5px; }
-      .hero p { color:var(--muted); margin:0; }
-      .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:16px; margin-top:20px; }
-      .card { background:var(--card); border:1px solid var(--line); border-radius:14px; overflow:hidden; display:flex; flex-direction:column; }
-      .thumb { aspect-ratio:4/3; background:linear-gradient(135deg,#1b2740,#0f1726); display:grid; place-items:center; color:var(--muted); font-size:13px; }
-      .thumb img { width:100%; height:100%; object-fit:cover; }
-      .card .body { padding:14px; display:flex; flex-direction:column; gap:8px; flex:1; }
-      .card h3 { margin:0; font-size:16px; }
-      .card .desc { color:var(--muted); font-size:14px; flex:1; }
-      .price { font-size:18px; font-weight:800; }
-      button { cursor:pointer; border:0; border-radius:10px; font-weight:700; font:inherit; }
-      .buy { background:var(--brand); color:#fff; padding:10px 12px; }
-      .buy:hover { filter:brightness(1.08); }
-      footer { color:var(--muted); text-align:center; padding:32px; font-size:13px; }
-      dialog { border:1px solid var(--line); background:var(--card); color:var(--txt); border-radius:16px; width:min(460px,92vw); padding:0; }
-      dialog::backdrop { background:rgba(0,0,0,.6); }
-      .dlg-head { padding:16px 18px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; }
-      .dlg-body { padding:18px; display:grid; gap:12px; }
-      label { font-size:13px; color:var(--muted); display:grid; gap:4px; }
-      input, textarea { background:var(--bg); border:1px solid var(--line); color:var(--txt); border-radius:10px; padding:10px 12px; font:inherit; }
-      .x { background:transparent; color:var(--muted); font-size:20px; }
-      .submit { background:var(--wa); color:#04210f; padding:12px; display:flex; align-items:center; justify-content:center; gap:8px; }
-    </style>
-  </head>
-  <body>
-    <header>
-      <div class="brand">🛍️ {STORE_NAME}</div>
-      <span class="badge">✅ Pago contra entrega · Envíos 24-72h</span>
-    </header>
+<Base title={`${STORE_NAME} · Tienda`}>
+  <section class="hero">
+    <h1>Productos con entrega a toda Colombia</h1>
+    <p>Pagas cuando recibes. Sin tarjetas, sin riesgos.</p>
+  </section>
 
-    <main>
-      <section class="hero">
-        <h1>Productos con entrega a toda Colombia</h1>
-        <p>Pagas cuando recibes. Sin tarjetas, sin riesgos. Pedidos por WhatsApp.</p>
-      </section>
+  <div class="controls">
+    <input class="search" id="q" type="search" placeholder="🔎 Buscar producto..." aria-label="Buscar" />
+    <select id="cat" aria-label="Categoría">
+      <option value="">Todas las categorías</option>
+      {categories.map((c) => <option value={c}>{c}</option>)}
+    </select>
+    <select id="sort" aria-label="Ordenar">
+      <option value="feat">Destacados</option>
+      <option value="asc">Precio: menor a mayor</option>
+      <option value="desc">Precio: mayor a menor</option>
+    </select>
+  </div>
 
-      <section class="grid">
-        {PRODUCTS.map((p) => (
-          <article class="card">
-            <div class="thumb">{p.img ? <img src={p.img} alt={p.name} loading="lazy" /> : 'Sin imagen'}</div>
-            <div class="body">
-              <h3>{p.name}</h3>
-              <p class="desc">{p.desc}</p>
-              <div class="price">{cop(p.price)}</div>
-              <button class="buy" data-name={p.name} data-price={p.price}>Pedir por WhatsApp</button>
-            </div>
-          </article>
-        ))}
-      </section>
-    </main>
-
-    <footer>Hecho con Astro · Pago contra entrega en Colombia</footer>
-
-    <dialog id="checkout">
-      <form method="dialog">
-        <div class="dlg-head">
-          <strong id="dlg-title">Finalizar pedido</strong>
-          <button class="x" value="cancel" aria-label="Cerrar">×</button>
+  <section class="grid" id="grid">
+    {products.map((p) => (
+      <a class="card" href={`/producto/${p.slug}/`} data-name={p.name.toLowerCase()} data-price={p.price} data-cat={p.category}>
+        <div class="thumb"><img src={p.images[0]} alt={p.name} loading="lazy" /></div>
+        <div class="body">
+          <span class="cat">{p.category}</span>
+          <h3>{p.name}</h3>
+          <div class="price">{cop(p.price)}</div>
+          <span class="cta">Ver producto →</span>
         </div>
-      </form>
-      <form id="order-form" class="dlg-body">
-        <label>Nombre completo<input name="name" required placeholder="Ej: Ana Pérez" /></label>
-        <label>Teléfono<input name="phone" required placeholder="Ej: 3001234567" /></label>
-        <label>Ciudad<input name="city" required placeholder="Ej: Medellín" /></label>
-        <label>Dirección<input name="address" required placeholder="Calle 1 # 2-3, barrio" /></label>
-        <label>Notas (color, talla, referencia)<textarea name="notes" rows="2"></textarea></label>
-        <button type="submit" class="submit">🟢 Enviar pedido por WhatsApp</button>
-      </form>
-    </dialog>
+      </a>
+    ))}
+    <p class="empty" id="empty" hidden>No encontramos productos con esos filtros.</p>
+  </section>
 
-    <script define:vars={{ WHATSAPP, STORE_NAME }}>
-      const dialog = document.getElementById('checkout');
-      const form = document.getElementById('order-form');
-      const title = document.getElementById('dlg-title');
-      let current = { name: '', price: 0 };
+  <script>
+    const grid = document.getElementById('grid');
+    const empty = document.getElementById('empty');
+    const q = document.getElementById('q');
+    const cat = document.getElementById('cat');
+    const sort = document.getElementById('sort');
+    const cards = Array.from(grid.querySelectorAll('.card'));
 
-      document.querySelectorAll('.buy').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          form.reset();
-          current = { name: btn.dataset.name, price: Number(btn.dataset.price) };
-          title.textContent = `Pedir: ${current.name}`;
-          dialog.showModal();
-        });
+    function apply() {
+      const term = q.value.trim().toLowerCase();
+      const category = cat.value;
+      let visible = cards.filter((c) => {
+        const okText = !term || c.dataset.name.includes(term);
+        const okCat = !category || c.dataset.cat === category;
+        c.hidden = !(okText && okCat);
+        return okText && okCat;
       });
+      if (sort.value !== 'feat') {
+        visible.sort((a, b) => (Number(a.dataset.price) - Number(b.dataset.price)) * (sort.value === 'asc' ? 1 : -1));
+        visible.forEach((c) => grid.insertBefore(c, empty));
+      }
+      empty.hidden = visible.length > 0;
+    }
 
-      form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const d = Object.fromEntries(new FormData(form).entries());
-        const precio = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(current.price);
-        const msg =
-          `¡Hola ${STORE_NAME}! Quiero pedir (pago contra entrega):\n\n` +
-          `🛍️ *${current.name}* — ${precio}\n\n` +
-          `👤 ${d.name}\n📱 ${d.phone}\n🏙️ ${d.city}\n📍 ${d.address}\n` +
-          (d.notes ? `📝 ${d.notes}\n` : '');
-        const url = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}`;
-        window.open(url, '_blank');
-        dialog.close();
-      });
-    </script>
-  </body>
-</html>
+    q.addEventListener('input', apply);
+    cat.addEventListener('change', apply);
+    sort.addEventListener('change', apply);
+  </script>
+</Base>
