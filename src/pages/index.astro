@@ -1,71 +1,248 @@
 ---
 import Base from '../layouts/Base.astro';
-import { STORE_NAME } from '../config.js';
+import { STORE_NAME, WHATSAPP } from '../config.js';
 import { products, categories } from '../data/products.js';
 
 const cop = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
+const oldPrice = (price) => Math.max(Math.round(price * 1.27 / 1000) * 1000, price + 15000);
+const discountPercent = (price) => Math.max(10, Math.round((1 - price / oldPrice(price)) * 100));
+const featured = products.slice(0, 6);
+const waLink = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hola ${STORE_NAME} 👋 Quiero pedir por WhatsApp.`)}`;
 ---
 
-<Base title={`${STORE_NAME} · Tienda`}>
+<Base title={`${STORE_NAME} · Tienda`} description="Monkey Store - tecnología y fitness con pago contra entrega en Colombia.">
   <section class="hero">
-    <h1>Productos con entrega a toda Colombia</h1>
-    <p>Pagas cuando recibes. Sin tarjetas, sin riesgos.</p>
+    <div class="hero-copy">
+      <span class="eyebrow">Monkey Store · pago contra entrega</span>
+      <h1>Tecnología y fitness para Colombia con entrega rápida</h1>
+      <p>Compra fácil por WhatsApp. Pagas solo cuando recibes en tu casa o trabajo. Envíos nacionales 24-72h.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="#tienda">Ver productos</a>
+        <a class="btn btn-secondary" href={waLink} target="_blank" rel="noopener noreferrer">Pedir por WhatsApp</a>
+      </div>
+    </div>
+    <div class="hero-aside">
+      <article class="hero-card">
+        <strong>Pago contra entrega</strong>
+        <p>Recibes, revisas y pagas. Sin tarjetas ni pasarelas.</p>
+      </article>
+      <article class="hero-card">
+        <strong>Envíos rápidos</strong>
+        <p>Vamos a todo Colombia desde Bogotá, Medellín y la costa.</p>
+      </article>
+      <article class="hero-card">
+        <strong>Garantía confiable</strong>
+        <p>Cambios y devoluciones claras si el producto no llega en buen estado.</p>
+      </article>
+    </div>
   </section>
 
-  <div class="controls">
-    <input class="search" id="q" type="search" placeholder="🔎 Buscar producto..." aria-label="Buscar" />
-    <select id="cat" aria-label="Categoría">
-      <option value="">Todas las categorías</option>
-      {categories.map((c) => <option value={c}>{c}</option>)}
-    </select>
-    <select id="sort" aria-label="Ordenar">
-      <option value="feat">Destacados</option>
-      <option value="asc">Precio: menor a mayor</option>
-      <option value="desc">Precio: mayor a menor</option>
-    </select>
-  </div>
+  <section class="benefits" aria-labelledby="benefits-title">
+    <div class="section-head">
+      <span class="eyebrow">Confianza</span>
+      <h2 id="benefits-title">Compra sin riesgos, recibe con tranquilidad</h2>
+      <p>Monkey Store entrega productos seleccionados de tecnología y fitness con un proceso fácil y seguro.</p>
+    </div>
+    <div class="benefit-grid">
+      <article>
+        <strong>Solo pagas al recibir</strong>
+        <p>Revisa el producto y paga cuando llegue a tu dirección.</p>
+      </article>
+      <article>
+        <strong>Envíos 24-72h</strong>
+        <p>Despachamos rápido y monitoreamos tu pedido hasta la entrega.</p>
+      </article>
+      <article>
+        <strong>Acompañamiento por WhatsApp</strong>
+        <p>Te respondemos por el mismo chat y confirmamos tus datos antes del envío.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="featured" aria-labelledby="featured-title">
+    <div class="section-head">
+      <span class="eyebrow">Destacados</span>
+      <h2 id="featured-title">Productos favoritos</h2>
+      <p>Seleccionados para tecnología y entrenamiento en casa.</p>
+    </div>
+    <div class="featured-grid">
+      {featured.map((product) => (
+        <a class="card featured-card" href={`/producto/${product.slug}/`}>
+          <div class="thumb"><img src={product.images[0]} alt={product.name} loading="lazy" /></div>
+          <div class="body">
+            <span class="cat">{product.category}</span>
+            <h3>{product.name}</h3>
+            <div class="price-row">
+              <strong>{cop(product.price)}</strong>
+              <span class="old-price">{cop(oldPrice(product.price))}</span>
+            </div>
+            <span class="discount">-{discountPercent(product.price)}%</span>
+          </div>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <section class="shop-filters" id="tienda">
+    <div class="section-head compact">
+      <span class="eyebrow">Filtrar</span>
+      <h2>Encuentra tu próximo producto</h2>
+    </div>
+
+    <div class="search-row">
+      <label class="visually-hidden" for="q">Buscar productos</label>
+      <input id="q" type="search" placeholder="Buscar por nombre o categoría..." aria-label="Buscar productos" />
+      <div class="sort-wrap">
+        <label class="visually-hidden" for="sort">Ordenar productos</label>
+        <select id="sort" aria-label="Ordenar productos">
+          <option value="feat">Orden recomendado</option>
+          <option value="asc">Precio: menor a mayor</option>
+          <option value="desc">Precio: mayor a menor</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="chips" role="tablist" aria-label="Filtrar por categoría">
+      <button type="button" class="chip active" data-cat="" aria-pressed="true">Todas</button>
+      {categories.map((category) => (
+        <button type="button" class="chip" data-cat={category} aria-pressed="false">{category}</button>
+      ))}
+    </div>
+
+    <p class="results" id="results">Mostrando {products.length} productos</p>
+  </section>
 
   <section class="grid" id="grid">
-    {products.map((p) => (
-      <a class="card" href={`/producto/${p.slug}/`} data-name={p.name.toLowerCase()} data-price={p.price} data-cat={p.category}>
-        <div class="thumb"><img src={p.images[0]} alt={p.name} loading="lazy" /></div>
+    {products.map((product) => (
+      <a class="card" href={`/producto/${product.slug}/`} data-name={product.name.toLowerCase()} data-price={product.price} data-cat={product.category}>
+        <div class="thumb"><img src={product.images[0]} alt={product.name} loading="lazy" /></div>
         <div class="body">
-          <span class="cat">{p.category}</span>
-          <h3>{p.name}</h3>
-          <div class="price">{cop(p.price)}</div>
-          <span class="cta">Ver producto →</span>
+          <span class="cat">{product.category}</span>
+          <h3>{product.name}</h3>
+          <div class="price-row">
+            <strong>{cop(product.price)}</strong>
+            <span class="old-price">{cop(oldPrice(product.price))}</span>
+          </div>
+          <span class="discount">-{discountPercent(product.price)}%</span>
+          <span class="cta">Ver detalles</span>
         </div>
       </a>
     ))}
-    <p class="empty" id="empty" hidden>No encontramos productos con esos filtros.</p>
+
+    <div class="empty" id="empty" hidden>
+      <p>No encontramos productos con esos filtros.</p>
+      <a class="btn btn-secondary" href="#tienda">Ver todos los productos</a>
+    </div>
+  </section>
+
+  <section class="reviews" aria-labelledby="reviews-title">
+    <div class="section-head">
+      <span class="eyebrow">Testimonios</span>
+      <h2 id="reviews-title">Nuestros clientes confían en Monkey Store</h2>
+    </div>
+    <div class="review-grid">
+      <article>
+        <p>"El envío fue rápido y pagué cuando lo recibí. El smartwatch llegó perfecto."</p>
+        <strong>Andrés · Bogotá</strong>
+      </article>
+      <article>
+        <p>"Compra segura por WhatsApp. Me ayudaron a confirmar la talla y el pedido llegó en 2 días."</p>
+        <strong>Camila · Medellín</strong>
+      </article>
+      <article>
+        <p>"Muy buena experiencia. La barra de puerta es firme y el pago contra entrega me dio confianza."</p>
+        <strong>Juan · Cali</strong>
+      </article>
+    </div>
+  </section>
+
+  <section class="faq" aria-labelledby="faq-title">
+    <div class="section-head">
+      <span class="eyebrow">Preguntas frecuentes</span>
+      <h2 id="faq-title">Respuestas claras antes de pedir</h2>
+    </div>
+    <div class="faq-grid">
+      <article>
+        <h3>¿Cómo funciona el pago contra entrega?</h3>
+        <p>Haces tu pedido por WhatsApp, confirmamos tus datos y pagas al recibir el producto en la dirección indicada.</p>
+      </article>
+      <article>
+        <h3>¿Cuál es el plazo de entrega?</h3>
+        <p>Normalmente 24-72 horas en ciudades principales, y puede variar un poco según la zona.</p>
+      </article>
+      <article>
+        <h3>¿Qué pasa si el producto llega dañado?</h3>
+        <p>Te ofrecemos devolución o cambio inmediato. Escribe al mismo chat y te ayudamos rápido.</p>
+      </article>
+      <article>
+        <h3>¿Puedo hacer seguimiento de mi pedido?</h3>
+        <p>Te enviamos la información de despacho por WhatsApp desde el momento en que sale del almacén.</p>
+      </article>
+    </div>
   </section>
 
   <script>
     const grid = document.getElementById('grid');
     const empty = document.getElementById('empty');
+    const results = document.getElementById('results');
     const q = document.getElementById('q');
-    const cat = document.getElementById('cat');
     const sort = document.getElementById('sort');
+    const chips = Array.from(document.querySelectorAll('.chip'));
     const cards = Array.from(grid.querySelectorAll('.card'));
 
-    function apply() {
-      const term = q.value.trim().toLowerCase();
-      const category = cat.value;
-      let visible = cards.filter((c) => {
-        const okText = !term || c.dataset.name.includes(term);
-        const okCat = !category || c.dataset.cat === category;
-        c.hidden = !(okText && okCat);
-        return okText && okCat;
+    const setActiveChip = (value) => {
+      chips.forEach((chip) => {
+        const active = chip.dataset.cat === value;
+        chip.classList.toggle('active', active);
+        chip.setAttribute('aria-pressed', active ? 'true' : 'false');
       });
-      if (sort.value !== 'feat') {
-        visible.sort((a, b) => (Number(a.dataset.price) - Number(b.dataset.price)) * (sort.value === 'asc' ? 1 : -1));
-        visible.forEach((c) => grid.insertBefore(c, empty));
-      }
-      empty.hidden = visible.length > 0;
-    }
+    };
 
-    q.addEventListener('input', apply);
-    cat.addEventListener('change', apply);
-    sort.addEventListener('change', apply);
+    const getSelectedCategory = () => {
+      const activeChip = chips.find((chip) => chip.classList.contains('active'));
+      return activeChip ? activeChip.dataset.cat : '';
+    };
+
+    const updateResults = (count) => {
+      results.textContent = `Mostrando ${count} producto${count === 1 ? '' : 's'}`;
+    };
+
+    const applyFilters = () => {
+      const term = q.value.trim().toLowerCase();
+      const category = getSelectedCategory();
+
+      const visible = cards.filter((card) => {
+        const matchesText = !term || card.dataset.name.includes(term);
+        const matchesCategory = !category || card.dataset.cat === category;
+        const show = matchesText && matchesCategory;
+        card.hidden = !show;
+        return show;
+      });
+
+      if (sort.value !== 'feat') {
+        visible
+          .slice()
+          .sort((a, b) => {
+            const diff = Number(a.dataset.price) - Number(b.dataset.price);
+            return sort.value === 'asc' ? diff : -diff;
+          })
+          .forEach((card) => grid.insertBefore(card, empty));
+      }
+
+      empty.hidden = visible.length > 0;
+      updateResults(visible.length);
+    };
+
+    chips.forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const category = chip.dataset.cat;
+        setActiveChip(category);
+        applyFilters();
+      });
+    });
+
+    q.addEventListener('input', applyFilters);
+    sort.addEventListener('change', applyFilters);
+    applyFilters();
   </script>
 </Base>

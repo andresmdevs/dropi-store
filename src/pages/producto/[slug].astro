@@ -1,24 +1,31 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { products, getProduct } from '../../data/products.js';
+import { products } from '../../data/products.js';
 import { WHATSAPP, STORE_NAME } from '../../config.js';
 
 export function getStaticPaths() {
-  return products.map((p) => ({ params: { slug: p.slug }, props: { product: p } }));
+  return products.map((product) => ({ params: { slug: product.slug }, props: { product } }));
 }
 
 const { product } = Astro.props;
 const cop = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
+const oldPrice = (price) => Math.max(Math.round(price * 1.27 / 1000) * 1000, price + 15000);
+const discountPercent = (price) => Math.max(10, Math.round((1 - price / oldPrice(price)) * 100));
+const related = products.filter((item) => item.category === product.category && item.slug !== product.slug).slice(0, 3);
 ---
 
 <Base title={`${product.name} · ${STORE_NAME}`} description={product.description.slice(0, 150)}>
   <div class="detail">
     <div class="gallery">
-      <img id="main-img" class="main" src={product.images[0]} alt={product.name} />
+      <div class="main-image">
+        <img id="main-img" src={product.images[0]} alt={product.name} loading="lazy" />
+      </div>
       {product.images.length > 1 && (
         <div class="thumbs">
-          {product.images.map((src) => (
-            <button class="thumb-btn" data-src={src} aria-label="Ver imagen"><img src={src} alt="" /></button>
+          {product.images.map((src, index) => (
+            <button class="thumb-btn" type="button" data-src={src} aria-label={`Ver imagen ${index + 1}`} aria-pressed={index === 0 ? 'true' : 'false'}>
+              <img src={src} alt={`${product.name} miniatura ${index + 1}`} loading="lazy" />
+            </button>
           ))}
         </div>
       )}
@@ -26,39 +33,144 @@ const cop = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency:
 
     <div class="info">
       <a href="/" class="back">← Volver a la tienda</a>
-      <div class="cat">{product.category}</div>
+      <span class="cat">{product.category}</span>
       <h1>{product.name}</h1>
-      <div class="price">{cop(product.price)}</div>
+      <div class="price-block">
+        <div>
+          <span class="new-price">{cop(product.price)}</span>
+          <span class="old-price">{cop(oldPrice(product.price))}</span>
+        </div>
+        <span class="discount-pill">-{discountPercent(product.price)}%</span>
+      </div>
       <p class="desc">{product.description}</p>
+      <div class="trust-chips">
+        <span class="pill">Pago al recibir</span>
+        <span class="pill">Envío rápido</span>
+        <span class="pill">Garantía local</span>
+      </div>
 
-      <form id="order-form" class="order">
-        <strong>Pedir con pago contra entrega</strong>
-        <label>Nombre completo<input name="name" required placeholder="Ej: Ana Pérez" /></label>
-        <label>Teléfono<input name="phone" required placeholder="Ej: 3001234567" /></label>
-        <label>Ciudad<input name="city" required placeholder="Ej: Medellín" /></label>
-        <label>Dirección<input name="address" required placeholder="Calle 1 # 2-3, barrio" /></label>
-        <label>Notas (color, talla, referencia)<textarea name="notes" rows="2"></textarea></label>
-        <button type="submit" class="submit">🟢 Pedir por WhatsApp</button>
-      </form>
+      <div class="highlight-list">
+        <h2>¿Por qué comprar aquí?</h2>
+        <ul>
+          <li>Compra fácil desde tu celular con WhatsApp como checkout.</li>
+          <li>Pagas solo cuando recibes el producto en la dirección indicada.</li>
+          <li>Te acompañamos en el pedido y el envío hasta que llegue.</li>
+        </ul>
+      </div>
+
+      <aside class="order-card">
+        <div class="order-top">
+          <div>
+            <p class="order-label">Paga contra entrega</p>
+            <strong>{cop(product.price)}</strong>
+          </div>
+          <span class="order-badge">Seguro</span>
+        </div>
+
+        <form id="order-form">
+          <label>
+            Nombre completo
+            <input name="name" required placeholder="Ej: Mariana G" />
+          </label>
+          <label>
+            Teléfono
+            <input name="phone" required placeholder="Ej: 3001234567" />
+          </label>
+          <label>
+            Ciudad
+            <input name="city" required placeholder="Ej: Barranquilla" />
+          </label>
+          <label>
+            Dirección
+            <input name="address" required placeholder="Calle 10 # 5-20, barrio" />
+          </label>
+          <label>
+            Notas (color, modelo, referencia)
+            <textarea name="notes" rows="3" placeholder="Ej: color negro, envío a oficina"></textarea>
+          </label>
+          <button type="submit" class="submit">Enviar pedido por WhatsApp</button>
+        </form>
+      </aside>
     </div>
   </div>
 
-  <script define:vars={{ WHATSAPP, STORE_NAME, product }}>
-    document.querySelectorAll('.thumb-btn').forEach((b) => {
-      b.addEventListener('click', () => { document.getElementById('main-img').src = b.dataset.src; });
-    });
+  <section class="how-it-works" aria-labelledby="how-title">
+    <div class="section-head">
+      <span class="eyebrow">Pago contra entrega</span>
+      <h2 id="how-title">Cómo funciona en Monkey Store</h2>
+    </div>
+    <div class="steps-grid">
+      <article>
+        <strong>1</strong>
+        <p>Pides por WhatsApp y confirmamos tu producto y dirección.</p>
+      </article>
+      <article>
+        <strong>2</strong>
+        <p>Despachamos rápidamente desde nuestro almacén en Colombia.</p>
+      </article>
+      <article>
+        <strong>3</strong>
+        <p>Recibes el producto, lo revisas y pagas en efectivo o Nequi.</p>
+      </article>
+      <article>
+        <strong>4</strong>
+        <p>Si algo no está bien, te ayudamos a devolver o cambiar sin líos.</p>
+      </article>
+    </div>
+  </section>
 
-    const form = document.getElementById('order-form');
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const d = Object.fromEntries(new FormData(form).entries());
-      const precio = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(product.price);
-      const msg =
-        `¡Hola ${STORE_NAME}! Quiero pedir (pago contra entrega):\n\n` +
-        `🛍️ *${product.name}* — ${precio}\n\n` +
-        `👤 ${d.name}\n📱 ${d.phone}\n🏙️ ${d.city}\n📍 ${d.address}\n` +
-        (d.notes ? `📝 ${d.notes}\n` : '');
-      window.open(`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}`, '_blank');
+  {related.length > 0 && (
+    <section class="related" aria-labelledby="related-title">
+      <div class="section-head">
+        <span class="eyebrow">Productos relacionados</span>
+        <h2 id="related-title">También te puede interesar</h2>
+      </div>
+      <div class="related-grid">
+        {related.map((item) => (
+          <a class="card" href={`/producto/${item.slug}/`}>
+            <div class="thumb"><img src={item.images[0]} alt={item.name} loading="lazy" /></div>
+            <div class="body">
+              <span class="cat">{item.category}</span>
+              <h3>{item.name}</h3>
+              <div class="price-row">
+                <strong>{cop(item.price)}</strong>
+              </div>
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+  )}
+
+  <script define:vars={{ WHATSAPP, STORE_NAME, product }}>
+    document.addEventListener('DOMContentLoaded', () => {
+      const mainImg = document.getElementById('main-img');
+      const thumbs = Array.from(document.querySelectorAll('.thumb-btn'));
+
+      thumbs.forEach((button) => {
+        button.addEventListener('click', () => {
+          thumbs.forEach((item) => item.setAttribute('aria-pressed', 'false'));
+          button.setAttribute('aria-pressed', 'true');
+          mainImg.src = button.dataset.src;
+        });
+      });
+
+      const form = document.getElementById('order-form');
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const data = Object.fromEntries(new FormData(form).entries());
+        const price = new Intl.NumberFormat('es-CO', {
+          style: 'currency',
+          currency: 'COP',
+          maximumFractionDigits: 0,
+        }).format(product.price);
+        const message =
+          `¡Hola ${STORE_NAME}! Quiero pedir este producto con pago contra entrega:\n\n` +
+          `🛍️ ${product.name} — ${price}\n\n` +
+          `👤 ${data.name}\n📱 ${data.phone}\n🏙️ ${data.city}\n📍 ${data.address}\n` +
+          (data.notes ? `📝 ${data.notes}\n` : '');
+        window.open(`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(message)}`, '_blank');
+      });
     });
   </script>
 </Base>
