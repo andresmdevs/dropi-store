@@ -27,15 +27,19 @@ const phoneDisplay = `+${WHATSAPP.slice(0, 2)} ${WHATSAPP.slice(2, 5)} ${WHATSAP
       </p>
     )}
     <dl>
-      <div><dt>Responsable</dt><dd>{SELLER.legalName || '—'}</dd></div>
-      <div><dt>Identificación</dt><dd>{SELLER.taxId || '—'}</dd></div>
-      <div><dt>Dirección de notificación</dt><dd>{SELLER.address || '—'}</dd></div>
-      <div>
-        <dt>Correo</dt>
-        <dd>{SELLER.email ? <a href={`mailto:${SELLER.email}`}>{SELLER.email}</a> : '—'}</dd>
-      </div>
+      {SELLER.legalName && <div><dt>Responsable</dt><dd>{SELLER.legalName}</dd></div>}
+      {SELLER.taxId && <div><dt>Identificación</dt><dd>{SELLER.taxId}</dd></div>}
+      {SELLER.address && <div><dt>Dirección de notificación</dt><dd>{SELLER.address}</dd></div>}
+      {SELLER.email && (
+        <div><dt>Correo</dt><dd><a href={`mailto:${SELLER.email}`}>{SELLER.email}</a></dd></div>
+      )}
       <div><dt>WhatsApp</dt><dd><a href={waLink} target="_blank" rel="noopener noreferrer">{phoneDisplay}</a></dd></div>
     </dl>
+    <p>
+      Vendemos como persona natural. Si necesitas nuestros datos tributarios completos —para una
+      factura, un reclamo formal o un trámite ante la SIC— escríbenos por WhatsApp o al correo y te
+      los entregamos de inmediato.
+    </p>
 
     <h2>Cómo se paga</h2>
     <p>

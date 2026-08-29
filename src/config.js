@@ -4,16 +4,19 @@ export const STORE_NAME = 'Monkey Store';
 export const WHATSAPP = '573008427074';
 
 // Identificación del vendedor. La Ley 1480 de 2011 (art. 50) obliga a publicar
-// quién vende, su identificación y una dirección de notificación.
+// quién vende y cómo contactarlo.
 //
-// ⚠️ COMPLETAR ANTES DE PROMOCIONAR EL SITIO. Mientras estos campos estén vacíos,
-// /legal muestra un aviso visible de que faltan. No los llenes con datos inventados:
-// un NIT falso es peor que no tener página legal.
+// Se publica nombre, correo y WhatsApp. NO se publican cédula ni dirección de
+// residencia: como persona natural el NIT es la cédula, y exponerla es
+// justamente el vector de suplantación que queremos evitar. Cuando exista un
+// establecimiento de comercio o una SAS, ahí sí van NIT y dirección comercial.
 export const SELLER = {
-  legalName: '',   // Ej: 'Andrés Mora' o la razón social de tu empresa
-  taxId: '',       // Ej: 'C.C. 1.234.567.890' o 'NIT 901.234.567-8'
-  address: '',     // Ej: 'Calle 10 # 43-25, Medellín, Antioquia'
-  email: '',       // Correo de contacto real y monitoreado
+  legalName: 'Andrés Felipe Mora Vélez',
+  email: 'andreshcp@gmail.com',
+  // Se dejan vacíos a propósito; la página omite la fila si no hay valor.
+  taxId: '',
+  address: '',
 };
 
-export const sellerComplete = Object.values(SELLER).every((v) => v.trim() !== '');
+/** Campos mínimos para que la página de identificación tenga sentido. */
+export const sellerComplete = Boolean(SELLER.legalName && SELLER.email);
