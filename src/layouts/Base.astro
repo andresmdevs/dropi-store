@@ -1,7 +1,19 @@
 ---
 import { STORE_NAME, WHATSAPP } from '../config.js';
-const { title = STORE_NAME, description = 'Pago contra entrega en toda Colombia. Envíos 24-72h.' } = Astro.props;
+const {
+  title = STORE_NAME,
+  description = 'Pago contra entrega en toda Colombia. Envíos 24-72h.',
+  image,
+  ogType = 'website',
+  hideFloat = false,
+  noindex = false,
+} = Astro.props;
 const waLink = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hola ${STORE_NAME} 👋 Quiero consultar un pedido por WhatsApp.`)}`;
+
+// Open Graph exige URLs absolutas. Sin esto el enlace compartido en WhatsApp
+// sale sin foto ni título, que es como se ve un phishing en un grupo.
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const ogImage = new URL(image ?? '/og-default.jpg', Astro.site);
 ---
 
 <!doctype html>
@@ -11,6 +23,28 @@ const waLink = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hola ${STOR
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     <meta name="description" content={description} />
+    {noindex
+      ? <meta name="robots" content="noindex, follow" />
+      : <link rel="canonical" href={canonical} />}
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#070b11" />
+
+    <meta property="og:type" content={ogType} />
+    <meta property="og:site_name" content={STORE_NAME} />
+    <meta property="og:locale" content="es_CO" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={noindex ? new URL('/', Astro.site) : canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={title} />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
     <style is:global>
       :root {
         color-scheme: dark;
@@ -18,6 +52,7 @@ const waLink = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hola ${STOR
         --surface: #111825;
         --surface-2: #141c2f;
         --line: #1f2a44;
+        --line-strong: #33415f;
         --txt: #f6f9ff;
         --muted: #92a7be;
         --brand: #38bdf8;
@@ -36,6 +71,7 @@ const waLink = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hola ${STOR
         --surface: #ffffff;
         --surface-2: #f2f6ff;
         --line: #d9e1f2;
+        --line-strong: #7b8aa6;
         --txt: #0f172a;
         --muted: #5b6d8a;
         --brand: #2563eb;
@@ -121,9 +157,14 @@ const waLink = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hola ${STOR
         position: sticky;
         top: 0;
         z-index: 20;
-        background: rgba(7, 11, 17, 0.95);
+        /* Con el fondo quemado en oscuro, en tema claro el nombre de la tienda
+           quedaba a 1,01:1 de contraste: invisible. Tiene que salir del token.
+           El semitransparente se aplica aparte con @supports: una declaración con
+           var() no se descarta al parsear, así que el truco de la doble
+           declaración no funcionaría y el header quedaría transparente. */
+        background: var(--bg);
         backdrop-filter: blur(18px);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        border-bottom: 1px solid var(--line);
         padding: 18px 24px;
         display: flex;
         align-items: center;
@@ -236,7 +277,7 @@ const waLink = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hola ${STOR
       .btn-secondary {
         background: transparent;
         color: var(--txt);
-        border: 1px solid rgba(255, 255, 255, 0.14);
+        border: 1px solid var(--line-strong, var(--line));
       }
 
       .hero-aside {
@@ -351,6 +392,14 @@ const waLink = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hola ${STOR
         display: block;
       }
 
+      /* Cuadrícula principal del catálogo. Sin esta regla la sección se comporta
+         como un bloque normal y los 25 productos quedan apilados a ancho completo. */
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 18px;
+      }
+
       .card {
         display: flex;
         flex-direction: column;
@@ -361,6 +410,12 @@ const waLink = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hola ${STOR
         border: 1px solid var(--line);
         border-radius: 30px;
         transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      /* `.card { display:flex }` es una regla de autor y le gana al `[hidden]` del
+         navegador, así que sin esto el filtro marca las tarjetas pero no las oculta. */
+      [hidden] {
+        display: none !important;
       }
 
       .card:hover {
@@ -460,8 +515,8 @@ const waLink = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hola ${STOR
 
       .chip {
         appearance: none;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--line-strong);
+        background: var(--surface-2);
         color: var(--txt);
         border-radius: 999px;
         padding: 10px 16px;
@@ -471,9 +526,15 @@ const waLink = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hola ${STOR
 
       .chip:hover,
       .chip.active {
-        background: rgba(56, 189, 248, 0.16);
-        border-color: rgba(56, 189, 248, 0.36);
+        /* El azul fijo con alpha se perdía sobre fondo claro: la categoría activa
+           tiene que leerse en los dos temas, así que sale del token de marca. */
+        background: var(--surface);
+        border-color: var(--brand);
         transform: translateY(-1px);
+      }
+
+      .chip.active {
+        font-weight: 700;
       }
 
       .detail {
@@ -740,6 +801,22 @@ const waLink = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hola ${STOR
       }
 
       @media (max-width: 560px) {
+        /* Dos columnas en móvil: con una sola, recorrer el catálogo son ~23 pantallas. */
+        .grid {
+          grid-template-columns: repeat(2, 1fr);
+          gap: 12px;
+        }
+
+        .grid .card {
+          padding: 12px;
+          border-radius: 20px;
+          gap: 10px;
+        }
+
+        .grid .card h3 {
+          font-size: 0.92rem;
+        }
+
         .chips {
           gap: 10px;
         }
@@ -786,11 +863,64 @@ const waLink = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hola ${STOR
       #order-form textarea {
         width: 100%;
         background: var(--bg);
+        /* iOS Safari hace zoom automático en cualquier campo por debajo de 16px,
+           y desalinea la vista justo cuando la persona ya decidió comprar. */
+        font-size: 16px;
+      }
+
+      .pay-note {
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 16px 18px;
+      }
+
+      .pay-note strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .pay-note p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.92rem;
       }
 
       #order-form textarea {
         resize: vertical;
         min-height: 84px;
+      }
+
+      /* Respaldo visible cuando el salto a WhatsApp no ocurre (webviews de TikTok/Instagram). */
+      #wa-backup {
+        display: grid;
+        gap: 10px;
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid var(--line);
+      }
+
+      #wa-backup .backup-title {
+        margin: 0;
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--txt);
+      }
+
+      #wa-backup .btn {
+        width: 100%;
+        cursor: pointer;
+      }
+
+      .backup-note {
+        margin: 2px 0 0;
+        font-size: 0.88rem;
+        color: var(--muted);
+      }
+
+      .backup-note strong {
+        color: var(--txt);
+        user-select: all;
       }
 
       .order-badge {
@@ -860,7 +990,39 @@ const waLink = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hola ${STOR
         font-size: 0.9rem;
       }
 
+      footer p {
+        margin: 0 0 8px;
+      }
+
+      .footer-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+      }
+
+      .footer-links a {
+        color: var(--brand);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+
       @media (max-width: 640px) {
+        /* El header sticky se comía 138px de 812 (17% de la pantalla, siempre)
+           porque la marca se partía en 3 líneas y los badges repetían el hero. */
+        header {
+          padding: 10px 14px;
+        }
+
+        .header-meta .badge {
+          display: none;
+        }
+
+        .brand {
+          font-size: 1rem;
+          white-space: nowrap;
+        }
+
         /* En móvil el botón se reduce a un círculo para no tapar contenido. */
         .whatsapp-float {
           right: 16px;
@@ -893,6 +1055,20 @@ const waLink = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hola ${STOR
         }
       }
 
+      /* Tintes semitransparentes solo donde color-mix() existe de verdad.
+         Fuera de @supports, una declaración con var() inválida deja la propiedad
+         en `unset` (fondo transparente), no en el valor anterior. */
+      @supports (background: color-mix(in srgb, red 50%, transparent)) {
+        header {
+          background: color-mix(in srgb, var(--bg) 94%, transparent);
+        }
+
+        .chip:hover,
+        .chip.active {
+          background: color-mix(in srgb, var(--brand) 14%, transparent);
+        }
+      }
+
       @media (prefers-reduced-motion: reduce) {
         * {
           animation-duration: 0.01ms !important;
@@ -916,14 +1092,31 @@ const waLink = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hola ${STOR
       <slot />
     </main>
 
-    <a class="whatsapp-float" href={waLink} target="_blank" rel="noopener noreferrer" aria-label="Contactar por WhatsApp">
-      <span>WhatsApp</span>
-      <strong>Escribe ya</strong>
-    </a>
+    {!hideFloat && (
+      <a class="whatsapp-float" href={waLink} target="_blank" rel="noopener noreferrer" aria-label="Contactar por WhatsApp">
+        <span>WhatsApp</span>
+        <strong>Escribe ya</strong>
+      </a>
+    )}
 
-    <footer>Monkey Store · Pago contra entrega en Colombia · Envíos 24-72h</footer>
+    <footer>
+      <p>{STORE_NAME} · Pago contra entrega en Colombia · Despachamos desde Medellín</p>
+      <p class="footer-links">
+        <a href="/legal/">Datos del vendedor, devoluciones y retracto</a>
+        <span aria-hidden="true">·</span>
+        <a href={waLink} target="_blank" rel="noopener noreferrer">Escríbenos por WhatsApp</a>
+      </p>
+    </footer>
 
     <script>
+      // Atribución: se captura en TODAS las páginas, no solo en la ficha. Quien llega
+      // por /?v=tt03 y después entra al producto ya no trae el parámetro en la URL.
+      try {
+        const origen = new URLSearchParams(location.search).get('v')
+          || new URLSearchParams(location.search).get('utm_source');
+        if (origen) sessionStorage.setItem('src', origen);
+      } catch (e) { /* navegación privada: la atribución es opcional */ }
+
       const button = document.querySelector('.theme-toggle');
       const root = document.documentElement;
       const stored = window.localStorage.getItem('theme');

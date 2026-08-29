@@ -20,3 +20,7 @@ npm-debug.log*
 # pipeline de imágenes
 .venv-img/
 .cache/
+
+# python
+__pycache__/
+*.pyc

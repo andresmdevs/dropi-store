@@ -9,12 +9,52 @@ export function getStaticPaths() {
 
 const { product } = Astro.props;
 const cop = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
-const oldPrice = (price) => Math.max(Math.round(price * 1.27 / 1000) * 1000, price + 15000);
-const discountPercent = (price) => Math.max(10, Math.round((1 - price / oldPrice(price)) * 100));
 const related = products.filter((item) => item.category === product.category && item.slug !== product.slug).slice(0, 3);
+
+// Solo lo que el navegador necesita para armar el mensaje de WhatsApp.
+// `cost`, `margin` y el id de Dropi NO pueden salir al HTML público.
+const publicProduct = { slug: product.slug, name: product.name, price: product.price };
+// El número tiene que existir como TEXTO: si el cliente copia el pedido y no se abrió
+// WhatsApp, sin el número no tiene a dónde pegarlo.
+const phoneDisplay = `+${WHATSAPP.slice(0, 2)} ${WHATSAPP.slice(2, 5)} ${WHATSAPP.slice(5, 8)} ${WHATSAPP.slice(8)}`;
+
+// Corta en el límite de palabra: antes quedaban descripciones partidas a mitad
+// de sílaba ("...Comp") en la meta description y en la vista previa del enlace.
+const summarize = (text, max = 155) => {
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  return cut.slice(0, cut.lastIndexOf(' ')).replace(/[,;:.]$/, '') + '…';
+};
+const description = summarize(product.description);
+const pageUrl = new URL(`/producto/${product.slug}/`, Astro.site);
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Product',
+  name: product.name,
+  description: product.description,
+  category: product.category,
+  image: product.images.map((src) => new URL(src, Astro.site).href),
+  offers: {
+    '@type': 'Offer',
+    url: pageUrl.href,
+    price: product.price,
+    priceCurrency: 'COP',
+    availability: 'https://schema.org/InStock',
+    itemCondition: 'https://schema.org/NewCondition',
+    seller: { '@type': 'Organization', name: STORE_NAME },
+  },
+};
 ---
 
-<Base title={`${product.name} · ${STORE_NAME}`} description={product.description.slice(0, 150)}>
+<Base
+  title={`${product.name} · ${STORE_NAME}`}
+  description={description}
+  image={`/products/${product.slug}-og.jpg`}
+  ogType="product"
+  hideFloat={true}
+>
+  <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   <div class="detail">
     <div class="gallery">
       <div class="main-image">
@@ -24,7 +64,9 @@ const related = products.filter((item) => item.category === product.category && 
         <div class="thumbs">
           {product.images.map((src, index) => (
             <button class="thumb-btn" type="button" data-src={src} aria-label={`Ver imagen ${index + 1}`} aria-pressed={index === 0 ? 'true' : 'false'}>
-              <img src={src} alt={`${product.name} miniatura ${index + 1}`} loading="lazy" />
+              {/* La miniatura usa la versión de 450px: cargar la de 900px para pintar
+                  72x72 desperdicia datos móviles justo donde se decide la compra. */}
+              <img src={src.replace('.webp', '-sm.webp')} alt={`${product.name} miniatura ${index + 1}`} width="72" height="72" loading="lazy" />
             </button>
           ))}
         </div>
@@ -38,9 +80,7 @@ const related = products.filter((item) => item.category === product.category && 
       <div class="price-block">
         <div>
           <span class="new-price">{cop(product.price)}</span>
-          <span class="old-price">{cop(oldPrice(product.price))}</span>
         </div>
-        <span class="discount-pill">-{discountPercent(product.price)}%</span>
       </div>
       <p class="desc">{product.description}</p>
       <div class="trust-chips">
@@ -49,13 +89,18 @@ const related = products.filter((item) => item.category === product.category && 
         <span class="pill">Garantía local</span>
       </div>
 
-      <div class="highlight-list">
-        <h2>¿Por qué comprar aquí?</h2>
-        <ul>
-          <li>Compra fácil desde tu celular con WhatsApp como checkout.</li>
-          <li>Pagas solo cuando recibes el producto en la dirección indicada.</li>
-          <li>Te acompañamos en el pedido y el envío hasta que llegue.</li>
-        </ul>
+      {product.highlights?.length > 0 && (
+        <div class="highlight-list">
+          <h2>Características</h2>
+          <ul>
+            {product.highlights.map((item) => <li>{item}</li>)}
+          </ul>
+        </div>
+      )}
+
+      <div class="pay-note">
+        <strong>Pagas {cop(product.price)} al recibir</strong>
+        <p>En efectivo o por transferencia al mensajero. No pagas nada por adelantado.</p>
       </div>
 
       <aside class="order-card">
@@ -70,19 +115,32 @@ const related = products.filter((item) => item.category === product.category && 
         <form id="order-form">
           <label>
             Nombre completo
-            <input name="name" required placeholder="Ej: Mariana G" />
+            <input name="name" required autocomplete="name" placeholder="Ej: Mariana G" />
           </label>
           <label>
-            Teléfono
-            <input name="phone" required placeholder="Ej: 3001234567" />
+            Celular
+            <input
+              name="phone"
+              required
+              type="tel"
+              inputmode="numeric"
+              autocomplete="tel"
+              pattern="3[0-9]{9}"
+              title="Celular colombiano de 10 dígitos que empieza por 3"
+              placeholder="Ej: 3001234567"
+            />
           </label>
           <label>
             Ciudad
-            <input name="city" required placeholder="Ej: Barranquilla" />
+            <input name="city" required autocomplete="address-level2" placeholder="Ej: Barranquilla" />
+          </label>
+          <label>
+            Departamento
+            <input name="department" required autocomplete="address-level1" placeholder="Ej: Atlántico" />
           </label>
           <label>
             Dirección
-            <input name="address" required placeholder="Calle 10 # 5-20, barrio" />
+            <input name="address" required autocomplete="street-address" placeholder="Calle 10 # 5-20, barrio" />
           </label>
           <label>
             Notas (color, modelo, referencia)
@@ -90,6 +148,17 @@ const related = products.filter((item) => item.category === product.category && 
           </label>
           <button type="submit" class="submit">Enviar pedido por WhatsApp</button>
         </form>
+
+        <!-- Respaldo para los navegadores embebidos de TikTok/Instagram, donde el salto
+             a WhatsApp puede no ocurrir y el cliente se queda sin ninguna señal. -->
+        <div id="wa-backup" hidden>
+          <p class="backup-title">¿No se abrió WhatsApp?</p>
+          <a id="wa-fallback" class="btn btn-secondary" href="#" rel="noopener">Abrir el chat manualmente</a>
+          <button type="button" id="wa-copy" class="btn btn-secondary">Copiar mi pedido</button>
+          <p class="backup-note">
+            O escríbenos tú al <strong>{phoneDisplay}</strong> y pega ahí tu pedido.
+          </p>
+        </div>
       </aside>
     </div>
   </div>
@@ -106,7 +175,7 @@ const related = products.filter((item) => item.category === product.category && 
       </article>
       <article>
         <strong>2</strong>
-        <p>Despachamos rápidamente desde nuestro almacén en Colombia.</p>
+        <p>Despachamos con transportadoras nacionales desde Medellín.</p>
       </article>
       <article>
         <strong>3</strong>
@@ -142,7 +211,7 @@ const related = products.filter((item) => item.category === product.category && 
     </section>
   )}
 
-  <script define:vars={{ WHATSAPP, STORE_NAME, product }}>
+  <script define:vars={{ WHATSAPP, STORE_NAME, product: publicProduct }}>
     document.addEventListener('DOMContentLoaded', () => {
       const mainImg = document.getElementById('main-img');
       const thumbs = Array.from(document.querySelectorAll('.thumb-btn'));
@@ -156,20 +225,64 @@ const related = products.filter((item) => item.category === product.category && 
       });
 
       const form = document.getElementById('order-form');
-      form.addEventListener('submit', (event) => {
-        event.preventDefault();
-        const data = Object.fromEntries(new FormData(form).entries());
+      const backup = document.getElementById('wa-backup');
+      const fallback = document.getElementById('wa-fallback');
+      const copyBtn = document.getElementById('wa-copy');
+
+      // La gente escribe "300 123 4567" o "+57 300...". Sin esto el pattern del campo
+      // los rechaza y el pedido se traba en el último paso.
+      form.phone.addEventListener('input', () => {
+        let v = form.phone.value.replace(/\D/g, '');
+        if (v.startsWith('57') && v.length > 10) v = v.slice(2);
+        form.phone.value = v.slice(0, 10);
+      });
+
+      const buildMessage = (data) => {
         const price = new Intl.NumberFormat('es-CO', {
           style: 'currency',
           currency: 'COP',
           maximumFractionDigits: 0,
         }).format(product.price);
-        const message =
+        let src = null;
+        try { src = sessionStorage.getItem('src'); } catch (e) { /* ignorar */ }
+        return (
           `¡Hola ${STORE_NAME}! Quiero pedir este producto con pago contra entrega:\n\n` +
-          `🛍️ ${product.name} — ${price}\n\n` +
-          `👤 ${data.name}\n📱 ${data.phone}\n🏙️ ${data.city}\n📍 ${data.address}\n` +
-          (data.notes ? `📝 ${data.notes}\n` : '');
-        window.open(`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(message)}`, '_blank');
+          `🛍️ ${product.name} — ${price}\n` +
+          `🔗 ${location.origin}/producto/${product.slug}/\n\n` +
+          `👤 ${data.name}\n📱 ${data.phone}\n🏙️ ${data.city}, ${data.department}\n📍 ${data.address}\n` +
+          (data.notes ? `📝 ${data.notes}\n` : '') +
+          (src ? `📍 Origen: ${src}\n` : '')
+        );
+      };
+
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const data = Object.fromEntries(new FormData(form).entries());
+        const message = buildMessage(data);
+        const url = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(message)}`;
+
+        // El respaldo usa api.whatsapp.com, una ruta distinta a la que acaba de intentarse:
+        // ofrecer el mismo wa.me que no abrió no le sirve de nada al cliente.
+        fallback.href = `https://api.whatsapp.com/send?phone=${WHATSAPP}&text=${encodeURIComponent(message)}`;
+        copyBtn.onclick = async () => {
+          try {
+            await navigator.clipboard.writeText(message);
+            copyBtn.textContent = 'Pedido copiado';
+          } catch (e) {
+            copyBtn.textContent = 'Selecciona el texto de arriba y cópialo';
+          }
+        };
+
+        // Solo se revela si al segundo seguimos aquí: si WhatsApp abrió, el cliente ya se
+        // fue y no tiene sentido dejarle "¿No se abrió?" para cuando vuelva.
+        const revelar = setTimeout(() => { backup.hidden = false; }, 1000);
+        const cancelar = () => { clearTimeout(revelar); backup.hidden = true; };
+        addEventListener('pagehide', cancelar, { once: true });
+        addEventListener('visibilitychange', () => { if (document.hidden) cancelar(); }, { once: true });
+
+        // Navegación normal en la misma pestaña: window.open queda bloqueado en los
+        // navegadores embebidos de TikTok e Instagram, que es de donde viene el tráfico.
+        window.location.href = url;
       });
     });
   </script>

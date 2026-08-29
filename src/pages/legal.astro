@@ -1,0 +1,194 @@
+---
+import Base from '../layouts/Base.astro';
+import { STORE_NAME, WHATSAPP, SELLER, sellerComplete } from '../config.js';
+
+const waLink = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent('Hola, tengo una pregunta sobre una compra.')}`;
+const phoneDisplay = `+${WHATSAPP.slice(0, 2)} ${WHATSAPP.slice(2, 5)} ${WHATSAPP.slice(5, 8)} ${WHATSAPP.slice(8)}`;
+---
+
+<Base
+  title={`Datos del vendedor y devoluciones · ${STORE_NAME}`}
+  description="Identificación del vendedor, política de devoluciones, garantía y derecho de retracto de Monkey Store."
+>
+  <article class="legal">
+    <a href="/" class="back">← Volver a la tienda</a>
+    <h1>Datos del vendedor, devoluciones y retracto</h1>
+    <p class="lead">
+      Esta página existe para que sepas exactamente con quién estás comprando y qué puedes hacer si
+      algo sale mal. La Ley 1480 de 2011 (Estatuto del Consumidor) nos obliga a publicarla, y a
+      nosotros nos conviene que la leas antes de darnos tu dirección.
+    </p>
+
+    <h2>Quién te vende</h2>
+    {!sellerComplete && (
+      <p class="pending">
+        Estamos terminando de publicar aquí nuestros datos de identificación. Mientras tanto,
+        escríbenos por WhatsApp y te los damos completos antes de que hagas cualquier pedido.
+      </p>
+    )}
+    <dl>
+      <div><dt>Responsable</dt><dd>{SELLER.legalName || '—'}</dd></div>
+      <div><dt>Identificación</dt><dd>{SELLER.taxId || '—'}</dd></div>
+      <div><dt>Dirección de notificación</dt><dd>{SELLER.address || '—'}</dd></div>
+      <div>
+        <dt>Correo</dt>
+        <dd>{SELLER.email ? <a href={`mailto:${SELLER.email}`}>{SELLER.email}</a> : '—'}</dd>
+      </div>
+      <div><dt>WhatsApp</dt><dd><a href={waLink} target="_blank" rel="noopener noreferrer">{phoneDisplay}</a></dd></div>
+    </dl>
+
+    <h2>Cómo se paga</h2>
+    <p>
+      Todos los pedidos son <strong>contra entrega</strong>: no pagas nada por adelantado. Pagas el
+      valor total al mensajero cuando el paquete llega a tu dirección. El precio que ves en la ficha
+      del producto es el que pagas; si hubiera algún costo de envío adicional para tu zona, te lo
+      decimos por WhatsApp antes de despachar, nunca después.
+    </p>
+
+    <h2>Tiempos de entrega</h2>
+    <p>
+      Despachamos con transportadoras nacionales desde Medellín. La entrega estimada es de
+      <strong>24 a 72 horas hábiles en ciudades principales</strong> y de 3 a 5 días hábiles en zonas
+      apartadas. Son estimados de la transportadora, no garantías: si tu pedido se demora más, escríbenos
+      y lo rastreamos contigo.
+    </p>
+
+    <h2>Derecho de retracto</h2>
+    <p>
+      En compras por internet tienes <strong>5 días hábiles</strong> desde que recibes el producto para
+      retractarte, según el artículo 47 de la Ley 1480. Solo escríbenos por WhatsApp dentro de ese plazo.
+      El producto debe devolverse en el mismo estado en que lo recibiste, con su empaque y accesorios.
+      El costo del transporte de la devolución corre por tu cuenta, tal como lo prevé la ley, y te
+      devolvemos el dinero dentro de los 30 días calendario siguientes.
+    </p>
+
+    <h2>Si el producto llega dañado o no es el que pediste</h2>
+    <p>
+      Esto no es retracto: es una falla nuestra y la asumimos nosotros. Revisa el paquete antes de pagar
+      cuando sea posible. Si al abrirlo encuentras que llegó roto, incompleto o que no corresponde a lo
+      que pediste, escríbenos lo antes posible —idealmente en las primeras 48 horas, porque nos ayuda a
+      reclamarle a la transportadora— con fotos del producto y del empaque. Te lo cambiamos o te devolvemos
+      el dinero, y el envío de ida y vuelta lo pagamos nosotros. Avisarnos después de esas 48 horas no te
+      quita ningún derecho: la garantía sigue vigente todo el año.
+    </p>
+
+    <h2>Garantía</h2>
+    <p>
+      Todos los productos tienen la <strong>garantía legal de 1 año</strong> que establece el artículo 8
+      de la Ley 1480, salvo que la ficha del producto indique un plazo mayor. Cubre defectos de calidad,
+      idoneidad y funcionamiento. Para hacerla efectiva, escríbenos por WhatsApp describiendo la falla:
+      no necesitas factura ni empaque original.
+    </p>
+    <p>
+      La ley solo nos exonera en los casos del artículo 16, que son taxativos: fuerza mayor o caso fortuito,
+      hecho de un tercero, uso indebido del producto por parte del consumidor, o que no se hayan atendido
+      las instrucciones de instalación, uso o mantenimiento. Fuera de esos casos respondemos nosotros, y
+      la carga de probarlos es nuestra, no tuya.
+    </p>
+
+    <h2>Sobre las fotos y las descripciones</h2>
+    <p>
+      Las imágenes son las que entrega el proveedor del producto. Procesamos el fondo para que el catálogo
+      se vea uniforme, pero <strong>no alteramos el producto</strong>: ni su forma, ni su color, ni sus
+      accesorios. Si alguna imagen no está a escala real y eso puede confundir, lo indicamos en la ficha.
+      Si encuentras una diferencia entre lo que muestra la foto y lo que recibiste, avísanos: es un error
+      que queremos corregir.
+    </p>
+
+    <h2>Reclamos</h2>
+    <p>
+      Escríbenos primero a nosotros por WhatsApp o al correo de arriba; respondemos por el mismo canal.
+      Si no quedas conforme, puedes presentar tu reclamo ante la Superintendencia de Industria y Comercio
+      (SIC) en <a href="https://www.sic.gov.co" target="_blank" rel="noopener noreferrer">sic.gov.co</a>.
+    </p>
+
+    <p class="updated">Última actualización: agosto de 2026.</p>
+  </article>
+</Base>
+
+<style is:global>
+  .legal {
+    max-width: 70ch;
+    margin: 0 auto;
+  }
+
+  .legal h1 {
+    font-size: clamp(1.9rem, 3.4vw, 2.6rem);
+    margin: 0 0 18px;
+    line-height: 1.15;
+  }
+
+  .legal h2 {
+    font-size: 1.2rem;
+    margin: 40px 0 10px;
+  }
+
+  .legal .lead {
+    color: var(--muted);
+    font-size: 1.05rem;
+  }
+
+  .legal p {
+    color: var(--muted);
+  }
+
+  .legal a {
+    color: var(--brand);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .legal dl {
+    display: grid;
+    gap: 12px;
+    margin: 0;
+    padding: 20px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+  }
+
+  .legal dl > div {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 12px;
+  }
+
+  .legal dt {
+    color: var(--muted);
+    font-size: 0.92rem;
+  }
+
+  .legal dd {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .legal .pending {
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    color: var(--warning);
+    border-radius: 14px;
+    padding: 14px 16px;
+    font-size: 0.92rem;
+  }
+
+  .legal .pending code {
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    font-size: 0.9em;
+  }
+
+  .legal .updated {
+    margin-top: 48px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+    font-size: 0.88rem;
+  }
+
+  @media (max-width: 560px) {
+    .legal dl > div {
+      grid-template-columns: 1fr;
+      gap: 2px;
+    }
+  }
+</style>

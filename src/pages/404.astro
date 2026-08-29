@@ -1,0 +1,61 @@
+---
+import Base from '../layouts/Base.astro';
+import { STORE_NAME } from '../config.js';
+import { products } from '../data/products.js';
+
+// Un link viejo compartido en un chat no puede morir en el 404 crudo de Render:
+// parece un sitio caído justo cuando alguien venía con intención de comprar.
+const cop = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
+const suggestions = products.slice(0, 3);
+---
+
+<Base noindex title={`Página no encontrada · ${STORE_NAME}`} description="No encontramos esa página. Mira el catálogo completo de Monkey Store.">
+  <section class="notfound">
+    <span class="eyebrow">Error 404</span>
+    <h1>Esa página ya no existe</h1>
+    <p>
+      Puede que el producto haya salido del catálogo o que el enlace esté incompleto.
+      El catálogo completo sigue aquí.
+    </p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="/">Ver todos los productos</a>
+    </div>
+  </section>
+
+  <section class="related">
+    <div class="section-head">
+      <span class="eyebrow">Mientras tanto</span>
+      <h2>Algo de lo que sí tenemos</h2>
+    </div>
+    <div class="related-grid">
+      {suggestions.map((item) => (
+        <a class="card" href={`/producto/${item.slug}/`}>
+          <div class="thumb"><img src={item.thumb} alt={item.name} width="450" height="450" loading="lazy" decoding="async" /></div>
+          <div class="body">
+            <span class="cat">{item.category}</span>
+            <h3>{item.name}</h3>
+            <div class="price-row"><strong>{cop(item.price)}</strong></div>
+          </div>
+        </a>
+      ))}
+    </div>
+  </section>
+</Base>
+
+<style is:global>
+  .notfound {
+    max-width: 60ch;
+    margin: 40px 0 56px;
+  }
+
+  .notfound h1 {
+    font-size: clamp(2rem, 4vw, 3rem);
+    margin: 16px 0 14px;
+    line-height: 1.1;
+  }
+
+  .notfound p {
+    color: var(--muted);
+    margin: 0;
+  }
+</style>

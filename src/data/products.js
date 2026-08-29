@@ -17,14 +17,25 @@ export const products = catalog.map((product) => {
     i === 0 ? `/products/${product.slug}.webp` : `/products/${product.slug}-${i + 1}.webp`,
   );
 
+  // `cost` se deja fuera a propósito: cualquier cosa que quede en este objeto puede
+  // terminar serializada al HTML público. La rentabilidad se calcula aparte.
+  const { cost, ...publicFields } = product;
+
   return {
-    ...product,
+    ...publicFields,
     images,
     image: images[0],
     thumb: `/products/${product.slug}-sm.webp`,
-    margin: product.price - product.cost,
   };
 });
+
+/** Rentabilidad por producto. Solo para uso en build/scripts, nunca en una página. */
+export const margins = catalog.map((p) => ({
+  slug: p.slug,
+  cost: p.cost,
+  price: p.price,
+  margin: p.price - p.cost,
+}));
 
 export const getProduct = (slug) => products.find((p) => p.slug === slug);
 

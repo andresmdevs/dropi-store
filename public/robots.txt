@@ -1,0 +1,22 @@
+User-agent: *
+Allow: /
+
+# Rastreadores de buscadores con IA: sin permitirlos no hay forma de ser citado
+# en sus respuestas, que es donde una tienda nueva puede aparecer sin autoridad
+# de dominio. Se listan explícitamente para dejar la intención por escrito.
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+Sitemap: https://monkey-store.onrender.com/sitemap-index.xml

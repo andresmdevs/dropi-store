@@ -4,13 +4,16 @@ import { STORE_NAME, WHATSAPP } from '../config.js';
 import { products, categories } from '../data/products.js';
 
 const cop = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
-const oldPrice = (price) => Math.max(Math.round(price * 1.27 / 1000) * 1000, price + 15000);
-const discountPercent = (price) => Math.max(10, Math.round((1 - price / oldPrice(price)) * 100));
+// No hay precio anterior real en los datos: mostrar uno calculado es un descuento
+// ficticio y lo sanciona la SIC. Solo se muestra el precio de verdad.
 const featured = products.slice(0, 6);
 const waLink = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hola ${STORE_NAME} 👋 Quiero pedir por WhatsApp.`)}`;
 ---
 
-<Base title={`${STORE_NAME} · Tienda`} description="Monkey Store - tecnología y fitness con pago contra entrega en Colombia.">
+<Base
+  title={`${STORE_NAME} · Tecnología y fitness con pago contra entrega`}
+  description="Compra tecnología y fitness en Colombia y paga cuando lo recibes. Envíos nacionales 24-72h desde Medellín."
+>
   <section class="hero">
     <div class="hero-copy">
       <span class="eyebrow">Monkey Store · pago contra entrega</span>
@@ -28,11 +31,11 @@ const waLink = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hola ${STOR
       </article>
       <article class="hero-card">
         <strong>Envíos rápidos</strong>
-        <p>Vamos a todo Colombia desde Bogotá, Medellín y la costa.</p>
+        <p>Despachamos con transportadoras nacionales desde Medellín a todo el país.</p>
       </article>
       <article class="hero-card">
         <strong>Garantía confiable</strong>
-        <p>Cambios y devoluciones claras si el producto no llega en buen estado.</p>
+        <p>Garantía legal de 1 año y 5 días hábiles de retracto, como manda la ley.</p>
       </article>
     </div>
   </section>
@@ -49,8 +52,8 @@ const waLink = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hola ${STOR
         <p>Revisa el producto y paga cuando llegue a tu dirección.</p>
       </article>
       <article>
-        <strong>Envíos 24-72h</strong>
-        <p>Despachamos rápido y monitoreamos tu pedido hasta la entrega.</p>
+        <strong>Entrega 24-72h</strong>
+        <p>24-72h hábiles en ciudades principales, 3-5 días en zonas apartadas.</p>
       </article>
       <article>
         <strong>Acompañamiento por WhatsApp</strong>
@@ -74,9 +77,7 @@ const waLink = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hola ${STOR
             <h3>{product.name}</h3>
             <div class="price-row">
               <strong>{cop(product.price)}</strong>
-              <span class="old-price">{cop(oldPrice(product.price))}</span>
             </div>
-            <span class="discount">-{discountPercent(product.price)}%</span>
           </div>
         </a>
       ))}
@@ -121,9 +122,7 @@ const waLink = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hola ${STOR
           <h3>{product.name}</h3>
           <div class="price-row">
             <strong>{cop(product.price)}</strong>
-            <span class="old-price">{cop(oldPrice(product.price))}</span>
           </div>
-          <span class="discount">-{discountPercent(product.price)}%</span>
           <span class="cta">Ver detalles</span>
         </div>
       </a>
@@ -135,26 +134,9 @@ const waLink = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hola ${STOR
     </div>
   </section>
 
-  <section class="reviews" aria-labelledby="reviews-title">
-    <div class="section-head">
-      <span class="eyebrow">Testimonios</span>
-      <h2 id="reviews-title">Nuestros clientes confían en Monkey Store</h2>
-    </div>
-    <div class="review-grid">
-      <article>
-        <p>"El envío fue rápido y pagué cuando lo recibí. El smartwatch llegó perfecto."</p>
-        <strong>Andrés · Bogotá</strong>
-      </article>
-      <article>
-        <p>"Compra segura por WhatsApp. Me ayudaron a confirmar la talla y el pedido llegó en 2 días."</p>
-        <strong>Camila · Medellín</strong>
-      </article>
-      <article>
-        <p>"Muy buena experiencia. La barra de puerta es firme y el pago contra entrega me dio confianza."</p>
-        <strong>Juan · Cali</strong>
-      </article>
-    </div>
-  </section>
+  <!-- Aquí iban tres testimonios inventados. Con 0 ventas restan confianza en vez de
+       sumarla, y son información engañosa. Cuando llegue la primera venta real, pedir
+       permiso al cliente y publicar la captura de esa conversación. -->
 
   <section class="faq" aria-labelledby="faq-title">
     <div class="section-head">
@@ -168,7 +150,7 @@ const waLink = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hola ${STOR
       </article>
       <article>
         <h3>¿Cuál es el plazo de entrega?</h3>
-        <p>Normalmente 24-72 horas en ciudades principales, y puede variar un poco según la zona.</p>
+        <p>24 a 72 horas hábiles en ciudades principales y 3 a 5 días hábiles en zonas apartadas. Son estimados de la transportadora.</p>
       </article>
       <article>
         <h3>¿Qué pasa si el producto llega dañado?</h3>
@@ -207,12 +189,18 @@ const waLink = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hola ${STOR
       results.textContent = `Mostrando ${count} producto${count === 1 ? '' : 's'}`;
     };
 
+    // Nadie escribe tildes en el teclado del celular: "audifonos" tiene que encontrar
+    // "Audífonos". Comparamos ambos lados sin acentos.
+    const norm = (s) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
     const applyFilters = () => {
-      const term = q.value.trim().toLowerCase();
+      const term = norm(q.value.trim());
       const category = getSelectedCategory();
 
       const visible = cards.filter((card) => {
-        const matchesText = !term || card.dataset.name.includes(term);
+        // El placeholder promete buscar por categoría, así que la incluimos.
+        const haystack = norm(`${card.dataset.name} ${card.dataset.cat}`);
+        const matchesText = !term || haystack.includes(term);
         const matchesCategory = !category || card.dataset.cat === category;
         const show = matchesText && matchesCategory;
         card.hidden = !show;
