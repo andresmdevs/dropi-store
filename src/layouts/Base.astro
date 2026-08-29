@@ -280,13 +280,61 @@ const ogImage = new URL(image ?? '/og-default.jpg', Astro.site);
         border: 1px solid var(--line-strong, var(--line));
       }
 
-      .hero-aside {
-        display: grid;
-        gap: 16px;
+      /* Franja de confianza del hero: reemplaza las 3 tarjetas de texto por una sola
+         línea. Lo que decían ya vive en /legal; aquí solo hace falta la señal rápida. */
+      .hero-trust {
+        margin-top: 14px !important;
+        font-size: 0.85rem !important;
+        color: var(--muted);
       }
 
-      .hero-card,
-      .benefit-grid article,
+      /* Vitrina del hero: producto real (foto + nombre + precio) en vez de texto de
+         confianza. Es lo primero que ve el visitante, antes de cualquier párrafo. */
+      .hero-aside {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        align-content: start;
+      }
+
+      .hero-pick {
+        display: grid;
+        gap: 8px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        padding: 12px;
+        text-align: center;
+        transition: transform 0.2s ease, border-color 0.2s ease;
+      }
+
+      .hero-pick:hover {
+        transform: translateY(-3px);
+        border-color: rgba(56, 189, 248, 0.3);
+      }
+
+      .hero-pick img {
+        width: 100%;
+        aspect-ratio: 1;
+        object-fit: cover;
+        border-radius: 14px;
+        background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      }
+
+      .hero-pick-name {
+        font-size: 0.78rem;
+        line-height: 1.3;
+        color: var(--muted);
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .hero-pick-price {
+        font-size: 0.92rem;
+      }
+
       .review-grid article,
       .faq-grid article,
       .related-grid .card,
@@ -299,16 +347,12 @@ const ogImage = new URL(image ?? '/og-default.jpg', Astro.site);
         padding: 24px;
       }
 
-      .hero-card strong,
-      .benefit-grid strong,
       .steps-grid strong {
         display: block;
         font-size: 1rem;
         margin-bottom: 12px;
       }
 
-      .hero-card p,
-      .benefit-grid p,
       .review-grid p,
       .faq-grid p {
         margin: 0;
@@ -336,11 +380,6 @@ const ogImage = new URL(image ?? '/og-default.jpg', Astro.site);
         max-width: 680px;
       }
 
-      .benefits {
-        margin-bottom: 42px;
-      }
-
-      .benefit-grid,
       .review-grid,
       .faq-grid,
       .related-grid,
@@ -348,10 +387,6 @@ const ogImage = new URL(image ?? '/og-default.jpg', Astro.site);
       .steps-grid {
         display: grid;
         gap: 18px;
-      }
-
-      .benefit-grid {
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       }
 
       .featured-grid {
@@ -778,7 +813,6 @@ const ogImage = new URL(image ?? '/og-default.jpg', Astro.site);
 
         .feature-grid,
         .featured-grid,
-        .benefit-grid,
         .review-grid,
         .faq-grid,
         .related-grid,
@@ -788,6 +822,25 @@ const ogImage = new URL(image ?? '/og-default.jpg', Astro.site);
 
         .hero p {
           font-size: 1rem;
+        }
+
+        /* Los picks del hero siguen en fila de 3 incluso en móvil: son la primera
+           prueba visual y no pueden apilarse debajo del pliegue. */
+        .hero-aside {
+          gap: 8px;
+        }
+
+        .hero-pick {
+          padding: 8px;
+          border-radius: 16px;
+        }
+
+        .hero-pick-name {
+          display: none;
+        }
+
+        .hero-pick-price {
+          font-size: 0.8rem;
         }
 
         .price-row {
@@ -829,6 +882,26 @@ const ogImage = new URL(image ?? '/og-default.jpg', Astro.site);
         .hero-actions {
           flex-direction: column;
           align-items: stretch;
+        }
+
+        /* El botón flotante de WhatsApp es fixed: en el primer pantallazo tapaba el
+           precio del tercer producto del hero. Se ajusta el espaciado, no el botón,
+           para que la fila de productos quede por encima de esa esquina. */
+        .hero {
+          gap: 18px;
+        }
+
+        .hero h1 {
+          margin: 10px 0 8px;
+        }
+
+        .hero-actions {
+          margin-top: 14px;
+          gap: 10px;
+        }
+
+        .hero-trust {
+          margin-top: 8px !important;
         }
       }
 

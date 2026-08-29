@@ -8,6 +8,13 @@ const cop = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency:
 // ficticio y lo sanciona la SIC. Solo se muestra el precio de verdad.
 const featured = products.slice(0, 6);
 const waLink = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hola ${STORE_NAME} 👋 Quiero pedir por WhatsApp.`)}`;
+
+// El primer pantallazo debe mostrar producto, no un párrafo de confianza: son las
+// tres fichas con mejores fotos (y las que hoy llevan tráfico pagado/orgánico desde
+// Facebook), así el visitante que llega de un anuncio ve lo mismo que vio afuera.
+const heroPicks = ['audifonos-deportivos-lenovo-lp75', 'luz-led-profesional-tripode', 'microfono-solapa-k9-x2']
+  .map((slug) => products.find((p) => p.slug === slug))
+  .filter(Boolean);
 ---
 
 <Base
@@ -17,48 +24,22 @@ const waLink = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hola ${STOR
   <section class="hero">
     <div class="hero-copy">
       <span class="eyebrow">Monkey Store · pago contra entrega</span>
-      <h1>Tecnología y fitness para Colombia con entrega rápida</h1>
-      <p>Compra fácil por WhatsApp. Pagas solo cuando recibes en tu casa o trabajo. Envíos nacionales 24-72h.</p>
+      <h1>Tecnología y fitness, pagas cuando lo recibes</h1>
+      <p>Pide por WhatsApp. Envíos a toda Colombia en 24-72h.</p>
       <div class="hero-actions">
         <a class="btn btn-primary" href="#tienda">Ver productos</a>
         <a class="btn btn-secondary" href={waLink} target="_blank" rel="noopener noreferrer">Pedir por WhatsApp</a>
       </div>
+      <p class="hero-trust">Sin tarjetas ni pasarelas · Garantía legal de 1 año</p>
     </div>
     <div class="hero-aside">
-      <article class="hero-card">
-        <strong>Pago contra entrega</strong>
-        <p>Recibes, revisas y pagas. Sin tarjetas ni pasarelas.</p>
-      </article>
-      <article class="hero-card">
-        <strong>Envíos rápidos</strong>
-        <p>Despachamos con transportadoras nacionales desde Medellín a todo el país.</p>
-      </article>
-      <article class="hero-card">
-        <strong>Garantía confiable</strong>
-        <p>Garantía legal de 1 año y 5 días hábiles de retracto, como manda la ley.</p>
-      </article>
-    </div>
-  </section>
-
-  <section class="benefits" aria-labelledby="benefits-title">
-    <div class="section-head">
-      <span class="eyebrow">Confianza</span>
-      <h2 id="benefits-title">Compra sin riesgos, recibe con tranquilidad</h2>
-      <p>Monkey Store entrega productos seleccionados de tecnología y fitness con un proceso fácil y seguro.</p>
-    </div>
-    <div class="benefit-grid">
-      <article>
-        <strong>Solo pagas al recibir</strong>
-        <p>Revisa el producto y paga cuando llegue a tu dirección.</p>
-      </article>
-      <article>
-        <strong>Entrega 24-72h</strong>
-        <p>24-72h hábiles en ciudades principales, 3-5 días en zonas apartadas.</p>
-      </article>
-      <article>
-        <strong>Acompañamiento por WhatsApp</strong>
-        <p>Te respondemos por el mismo chat y confirmamos tus datos antes del envío.</p>
-      </article>
+      {heroPicks.map((product) => (
+        <a class="hero-pick" href={`/producto/${product.slug}/`}>
+          <img src={product.thumb} alt={product.name} width="160" height="160" loading="eager" fetchpriority="high" decoding="async" />
+          <span class="hero-pick-name">{product.name}</span>
+          <strong class="hero-pick-price">{cop(product.price)}</strong>
+        </a>
+      ))}
     </div>
   </section>
 
