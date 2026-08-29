@@ -892,6 +892,10 @@ const ogImage = new URL(image ?? '/og-default.jpg', Astro.site);
         }
 
         .hero h1 {
+          /* El clamp de escritorio (mín. 2.4rem) sigue siendo enorme en un teléfono:
+             el titular ocupaba 4 líneas y empujaba los hero-pick fuera del primer
+             pantallazo. Aquí sí se fija un tamaño propio para móvil. */
+          font-size: 1.85rem;
           margin: 10px 0 8px;
         }
 
