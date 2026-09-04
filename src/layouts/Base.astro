@@ -600,6 +600,49 @@ const ogImage = new URL(image ?? '/og-default.jpg', Astro.site);
         object-fit: cover;
       }
 
+      /* Solo se agrega cuando hay más de una imagen: el cursor de "se puede
+         arrastrar" no debe aparecer en una foto única que no va a ningún lado. */
+      .main-image:has(.gallery-nav) {
+        cursor: grab;
+        outline: none;
+      }
+
+      .main-image:has(.gallery-nav):active {
+        cursor: grabbing;
+      }
+
+      .gallery-nav {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 44px;
+        height: 44px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        background: rgba(7, 11, 17, 0.55);
+        backdrop-filter: blur(4px);
+        color: var(--txt);
+        font-size: 1.6rem;
+        line-height: 1;
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        transition: background 0.15s ease, transform 0.15s ease;
+      }
+
+      .gallery-nav:hover {
+        background: rgba(7, 11, 17, 0.8);
+        transform: translateY(-50%) scale(1.06);
+      }
+
+      .gallery-prev {
+        left: 14px;
+      }
+
+      .gallery-next {
+        right: 14px;
+      }
+
       .thumbs {
         display: flex;
         gap: 12px;

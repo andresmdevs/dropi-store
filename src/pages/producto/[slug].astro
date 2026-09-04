@@ -59,6 +59,12 @@ const jsonLd = {
     <div class="gallery">
       <div class="main-image">
         <img id="main-img" src={product.image} alt={product.name} width="900" height="900" fetchpriority="high" decoding="async" />
+        {product.images.length > 1 && (
+          <>
+            <button class="gallery-nav gallery-prev" type="button" aria-label="Imagen anterior">‹</button>
+            <button class="gallery-nav gallery-next" type="button" aria-label="Imagen siguiente">›</button>
+          </>
+        )}
       </div>
       {product.images.length > 1 && (
         <div class="thumbs">
@@ -218,15 +224,63 @@ const jsonLd = {
   <script define:vars={{ WHATSAPP, STORE_NAME, product: publicProduct }}>
     document.addEventListener('DOMContentLoaded', () => {
       const mainImg = document.getElementById('main-img');
+      const mainImageBox = document.querySelector('.main-image');
       const thumbs = Array.from(document.querySelectorAll('.thumb-btn'));
+      const gallerySrcs = thumbs.map((button) => button.dataset.src);
+      let galleryIndex = 0;
 
-      thumbs.forEach((button) => {
-        button.addEventListener('click', () => {
-          thumbs.forEach((item) => item.setAttribute('aria-pressed', 'false'));
-          button.setAttribute('aria-pressed', 'true');
-          mainImg.src = button.dataset.src;
-        });
+      // Único punto de verdad para "qué imagen se ve": clic en miniatura, flechas,
+      // swipe y teclado terminan todos aquí en vez de tocar mainImg.src por su cuenta.
+      const showImage = (index) => {
+        if (gallerySrcs.length === 0) return;
+        galleryIndex = (index + gallerySrcs.length) % gallerySrcs.length;
+        mainImg.src = gallerySrcs[galleryIndex];
+        thumbs.forEach((item, i) => item.setAttribute('aria-pressed', i === galleryIndex ? 'true' : 'false'));
+      };
+
+      thumbs.forEach((button, index) => {
+        button.addEventListener('click', () => showImage(index));
       });
+
+      if (gallerySrcs.length > 1) {
+        const prevBtn = document.querySelector('.gallery-prev');
+        const nextBtn = document.querySelector('.gallery-next');
+        prevBtn?.addEventListener('click', () => showImage(galleryIndex - 1));
+        nextBtn?.addEventListener('click', () => showImage(galleryIndex + 1));
+
+        // Flechas del teclado cuando el foco está en la galería (accesibilidad,
+        // y cómodo en desktop sin tener que apuntar el mouse a las flechas).
+        mainImageBox.setAttribute('tabindex', '0');
+        mainImageBox.addEventListener('keydown', (event) => {
+          if (event.key === 'ArrowLeft') showImage(galleryIndex - 1);
+          if (event.key === 'ArrowRight') showImage(galleryIndex + 1);
+        });
+
+        // Swipe táctil y arrastre con mouse: mismo umbral de distancia para ambos,
+        // así el gesto se siente igual de bien en celular que arrastrando con el mouse.
+        const SWIPE_THRESHOLD = 40;
+        let dragStartX = null;
+
+        const onDragStart = (x) => { dragStartX = x; };
+        const onDragEnd = (x) => {
+          if (dragStartX === null) return;
+          const delta = x - dragStartX;
+          dragStartX = null;
+          if (Math.abs(delta) < SWIPE_THRESHOLD) return;
+          showImage(galleryIndex + (delta < 0 ? 1 : -1));
+        };
+
+        mainImageBox.addEventListener('touchstart', (event) => onDragStart(event.touches[0].clientX), { passive: true });
+        mainImageBox.addEventListener('touchend', (event) => onDragEnd(event.changedTouches[0].clientX));
+
+        mainImageBox.addEventListener('mousedown', (event) => {
+          // Los clics en las flechas/miniaturas ya cambian de imagen por su cuenta;
+          // arrastrar desde ahí solo confundiría el gesto.
+          if (event.target.closest('.gallery-nav')) return;
+          onDragStart(event.clientX);
+        });
+        window.addEventListener('mouseup', (event) => onDragEnd(event.clientX));
+      }
 
       const form = document.getElementById('order-form');
       const backup = document.getElementById('wa-backup');
