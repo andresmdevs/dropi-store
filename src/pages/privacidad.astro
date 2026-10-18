@@ -1,0 +1,78 @@
+---
+import Base from '../layouts/Base.astro';
+import { STORE_NAME, WHATSAPP, SELLER } from '../config.js';
+
+const waLink = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent('Hola, quiero consultar o eliminar mis datos personales.')}`;
+const phoneDisplay = `+${WHATSAPP.slice(0, 2)} ${WHATSAPP.slice(2, 5)} ${WHATSAPP.slice(5, 8)} ${WHATSAPP.slice(8)}`;
+---
+
+<Base
+  title={`Política de privacidad · ${STORE_NAME}`}
+  description="Cómo trata Monkey Store tus datos personales, para qué los usa y cómo pedir que los eliminemos (Ley 1581 de 2012)."
+>
+  <article class="legal">
+    <a href="/" class="back">← Volver a la tienda</a>
+    <h1>Política de privacidad y tratamiento de datos</h1>
+    <p class="lead">
+      Para entregarte un pedido contra entrega necesitamos algunos datos tuyos. Aquí te contamos
+      cuáles, para qué los usamos y cómo puedes consultarlos, corregirlos o pedir que los borremos,
+      como manda la Ley 1581 de 2012 y el Decreto 1377 de 2013.
+    </p>
+
+    <h2>Responsable</h2>
+    <dl>
+      {SELLER.legalName && <div><dt>Responsable</dt><dd>{SELLER.legalName} ({STORE_NAME})</dd></div>}
+      {SELLER.email && (
+        <div><dt>Correo</dt><dd><a href={`mailto:${SELLER.email}`}>{SELLER.email}</a></dd></div>
+      )}
+      <div><dt>WhatsApp</dt><dd><a href={waLink} target="_blank" rel="noopener noreferrer">{phoneDisplay}</a></dd></div>
+    </dl>
+
+    <h2>Qué datos recogemos</h2>
+    <ul>
+      <li>Nombre y apellido, celular, dirección, ciudad y departamento de entrega.</li>
+      <li>Los mensajes que nos escribes por WhatsApp, Facebook o Instagram.</li>
+      <li>De dónde llegaste a la tienda (por ejemplo, una publicación o un anuncio), para saber qué funciona.</li>
+    </ul>
+    <p>No pedimos ni guardamos datos de tarjetas: el pago es en efectivo al recibir.</p>
+
+    <h2>Para qué los usamos</h2>
+    <ul>
+      <li>Crear y despachar tu pedido, y hacerle seguimiento hasta que llegue.</li>
+      <li>Responder tus preguntas, cambios, garantías y devoluciones.</li>
+      <li>Si nos autorizas, avisarte de productos nuevos u ofertas. Puedes decir que no en cualquier momento.</li>
+    </ul>
+
+    <h2>Con quién los compartimos</h2>
+    <p>
+      Solo con quienes hacen posible la entrega: la plataforma de proveedores Dropi y la
+      transportadora que lleva tu pedido (nombre, celular y dirección). No vendemos ni alquilamos
+      tus datos.
+    </p>
+
+    <h2>Cuánto tiempo los guardamos</h2>
+    <p>
+      Mientras dure la relación de compra y el tiempo que exige la ley para atender garantías y
+      reclamos. Después los eliminamos.
+    </p>
+
+    <h2>Tus derechos</h2>
+    <p>
+      Puedes conocer, actualizar y corregir tus datos, pedir prueba de la autorización, revocarla y
+      pedir que los eliminemos. Respondemos consultas en máximo 10 días hábiles y reclamos en máximo
+      15 días hábiles. Si no quedas satisfecho, puedes acudir a la Superintendencia de Industria y
+      Comercio (SIC).
+    </p>
+
+    <h2 id="eliminar-datos">Cómo pedir que borremos tus datos</h2>
+    <p>
+      Escríbenos por <a href={waLink} target="_blank" rel="noopener noreferrer">WhatsApp al {phoneDisplay}</a>
+      {SELLER.email && <> o al correo <a href={`mailto:${SELLER.email}`}>{SELLER.email}</a></>}
+      con el asunto «Eliminar mis datos» y el celular con el que compraste. Esto incluye los datos
+      que nos hayan llegado por Facebook o Instagram. Los borramos en máximo 15 días hábiles y te
+      confirmamos cuando esté hecho.
+    </p>
+
+    <p class="small">Vigente desde el 17 de octubre de 2026.</p>
+  </article>
+</Base>
