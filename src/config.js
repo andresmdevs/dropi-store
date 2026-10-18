@@ -1,7 +1,7 @@
 export const STORE_NAME = 'Monkey Store';
 
 // WhatsApp del negocio (código país 57 = Colombia).
-export const WHATSAPP = '573008427074';
+export const WHATSAPP = '573117918947';
 
 // Identificación del vendedor. La Ley 1480 de 2011 (art. 50) obliga a publicar
 // quién vende y cómo contactarlo.
