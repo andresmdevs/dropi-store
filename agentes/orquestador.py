@@ -29,11 +29,14 @@ from datetime import datetime, timedelta
 
 import fuentes
 import precios
-from comun import (AGENTES, CONFIG, DATOS, LATIDOS, PRODUCTOS, Latido, ahora, chat_json,
+from comun import (AGENTES, CONFIG, DATOS, LATIDOS, PRODUCTOS, RAIZ, Latido, ahora, chat_json,
                    escribir_json, leer_json, log, ollama_vivo)
 
 ESTADO = DATOS / "estado.json"
 FLETES_MANUALES = DATOS / "fletes_manuales.json"
+# Lo escriben el panel y la app de la barra de menú: {"pausado": bool, "despertar": "<iso>"}
+CONTROL = DATOS / "control.json"
+SESIONES = DATOS / "sesiones.json"
 CANDADO = threading.Lock()
 # Con la RAM libre de este Mac no caben los dos modelos a la vez: Ollama descarga uno para
 # cargar el otro. El turno hace que cada agente procese su lote entero antes de ceder,
@@ -82,6 +85,25 @@ class turno:
 
     def __exit__(self, *exc):
         TURNO.release()
+
+
+def control() -> dict:
+    return leer_json(CONTROL, {}) or {}
+
+
+def pausado() -> bool:
+    return bool(control().get("pausado"))
+
+
+def esperar(segundos: float) -> None:
+    """Duerme, pero despierta antes si piden «trabajar ahora», si pausan o si se apaga."""
+    inicio = control()
+    fin = time.time() + segundos
+    while time.time() < fin and not PARAR.is_set():
+        actual = control()
+        if actual.get("despertar") != inicio.get("despertar") or actual.get("pausado") != inicio.get("pausado"):
+            return
+        PARAR.wait(3)
 
 
 def conteo() -> dict:
@@ -192,20 +214,30 @@ def ciclo_analista(lat: Latido) -> bool:
     # 1. Catálogo de Dropi cada N horas
     ultimo = estado.get("catalogo_ultimo")
     vence = datetime.fromisoformat(ultimo) + timedelta(hours=CONFIG["catalogo_cada_horas"]) if ultimo else None
-    if not vence or datetime.now().astimezone() >= vence:
+    pedido = control().get("despertar") or ""  # «Trabajar ahora» también refresca el catálogo
+    if not vence or datetime.now().astimezone() >= vence or pedido > (ultimo or ""):
         lat.set("trabajando", "Buscando productos nuevos en Dropi")
+        errores = []
         try:
             n = fuentes.traer_catalogo_dropi()
-            log("analista", f"Catálogo Dropi: {n} productos nuevos")
-            estado["catalogo_ultimo"] = ahora()
-            estado.pop("catalogo_error", None)
-        except fuentes.TokenVencido as e:
-            estado["catalogo_error"] = str(e)
-            # Reintenta en 30 min (no en cada ciclo), por si pegas un token nuevo.
+            log("analista", f"Catálogo Dropi (API): {n} productos nuevos")
+        except Exception as e:  # noqa: BLE001
+            errores.append(str(e))
+            try:
+                lat.set("trabajando", "Buscando productos top con la sesión web de Dropi")
+                n = fuentes.traer_catalogo_web()
+                log("analista", f"Catálogo Dropi (web): {n} productos nuevos")
+                errores = []
+            except Exception as e2:  # noqa: BLE001
+                errores.append(str(e2))
+        if errores:
+            estado["catalogo_error"] = "Sin productos nuevos de Dropi. " + " · ".join(errores)
+            # Reintenta en 30 min (no en cada ciclo), por si reconectas o pegas un token nuevo.
             reintento = datetime.now().astimezone() - timedelta(hours=CONFIG["catalogo_cada_horas"], minutes=-30)
             estado["catalogo_ultimo"] = reintento.isoformat(timespec="seconds")
-        except Exception as e:  # noqa: BLE001
-            estado["catalogo_error"] = f"Error trayendo catálogo: {e}"
+        else:
+            estado.pop("catalogo_error", None)
+            estado["catalogo_ultimo"] = ahora()
         escribir_json(ESTADO, estado)
     if estado.get("catalogo_error"):
         bloqueos.append(estado["catalogo_error"])
@@ -215,7 +247,7 @@ def ciclo_analista(lat: Latido) -> bool:
     if nuevos:
         with turno(lat):
             for p in nuevos:
-                if PARAR.is_set():
+                if PARAR.is_set() or pausado():
                     break
                 lat.set("trabajando", f"Evaluando: {p['nombre']}")
                 try:
@@ -250,9 +282,40 @@ def ciclo_analista(lat: Latido) -> bool:
             guardar(p, "con_precio" if p["etapa"] == "evaluado" else None, nota)
             trabajo = True
 
+    bloqueos += verificar_telefonos()
+    if (leer_json(SESIONES, {}) or {}).get("dropi", {}).get("ok") is False:
+        bloqueos.append("La sesión de Dropi del navegador se cayó: usa «Reconectar Dropi» en el panel")
+
     lat.bloqueos(bloqueos)
     lat.set(resumen=conteo())
     return trabajo
+
+
+def verificar_telefonos() -> list[str]:
+    """Busca los números prohibidos en el código de la tienda y en los anuncios.
+
+    En los anuncios los corrige solo; en el código avisa (los cambios de código los revisas tú).
+    """
+    tel = CONFIG.get("telefono") or {}
+    prohibidos = [re.sub(r"\D", "", n) for n in tel.get("prohibidos", [])]
+    if not prohibidos:
+        return []
+    patron = re.compile("|".join(r"\D?".join(n) for n in prohibidos))
+    avisos = []
+    archivos = [f for carpeta in ("src", "docs", "public") for f in (RAIZ / carpeta).rglob("*")
+                if f.is_file() and f.suffix in (".js", ".ts", ".astro", ".json", ".md", ".html", ".xml", ".txt")]
+    en_codigo = [str(f.relative_to(RAIZ)) for f in archivos if patron.search(f.read_text(errors="ignore"))]
+    if en_codigo:
+        avisos.append(f"El número viejo sigue en: {', '.join(en_codigo[:5])}")
+    for p in productos("en_cola"):
+        a = p.get("anuncio") or {}
+        texto = f"{a.get('titulo', '')}\n{a.get('descripcion', '')}"
+        if patron.search(texto):
+            a["titulo"] = patron.sub(tel["actual"], a.get("titulo", ""))
+            a["descripcion"] = patron.sub(tel["actual"], a.get("descripcion", ""))
+            guardar(p, None, "Teléfono viejo corregido")
+            log("analista", f"Teléfono viejo corregido en el anuncio de {p['nombre']}")
+    return avisos
 
 
 # ---------------------------------------------------------------------------
@@ -267,16 +330,17 @@ Reglas:
 - Descripción de 4 a 8 líneas: qué es, para qué sirve, qué incluye, 3 o 4 viñetas con «•».
 - No inventes características que no estén en los datos. Nada de promesas médicas.
 - No pongas teléfonos, enlaces ni precios dentro de la descripción.
-- Categoría según el uso: fitness/ejercicio -> Artículos deportivos; audio, cámaras, relojes,
-  luces, proyectores -> Electrónica; cargadores y accesorios de celular -> Celulares y accesorios.
+- Categoría según el uso: fitness/ejercicio -> Deportes y actividades al aire libre; audio, cámaras,
+  relojes, luces, proyectores -> Electrónica y computadoras; cargadores y accesorios de celular -> Celulares;
+  cosas de la casa -> Artículos para el hogar.
+- foto_con_telefono_ajeno = true si la foto muestra un número de teléfono, un WhatsApp, un logo o una
+  marca de agua de otro vendedor.
 - Termina siempre con estas dos líneas exactas:
   ✅ Pago contra entrega en toda Colombia
   🚚 Envío incluido
 Responde solo con el JSON pedido."""
 
-CATEGORIAS_FB = ["Electrónica", "Celulares y accesorios", "Artículos deportivos", "Hogar", "Herramientas",
-                 "Juguetes y juegos", "Salud y belleza", "Ropa y accesorios", "Accesorios para vehículos",
-                 "Mascotas", "Videojuegos", "Varios"]
+CATEGORIAS_FB = CONFIG["marketplace"]["categorias"]
 
 ESQUEMA_ANUNCIO = {
     "type": "object",
@@ -285,8 +349,23 @@ ESQUEMA_ANUNCIO = {
         "descripcion": {"type": "string"},
         "categoria": {"type": "string", "enum": CATEGORIAS_FB},
         "etiquetas": {"type": "array", "items": {"type": "string"}, "maxItems": 5},
+        "foto_con_telefono_ajeno": {"type": "boolean"},
     },
-    "required": ["titulo", "descripcion", "categoria", "etiquetas"],
+    "required": ["titulo", "descripcion", "categoria", "etiquetas", "foto_con_telefono_ajeno"],
+}
+
+ESQUEMA_FOTO = {
+    "type": "object",
+    "properties": {"foto_con_telefono_ajeno": {"type": "boolean"}, "que_se_ve": {"type": "string"}},
+    "required": ["foto_con_telefono_ajeno", "que_se_ve"],
+}
+
+# Nombres viejos -> categorías reales del formulario de Marketplace
+CATEGORIAS_VIEJAS = {
+    "Electrónica": "Electrónica y computadoras", "Celulares y accesorios": "Celulares",
+    "Artículos deportivos": "Deportes y actividades al aire libre", "Hogar": "Artículos para el hogar",
+    "Accesorios para vehículos": "Repuestos para autos", "Mascotas": "Artículos para mascotas",
+    "Ropa y accesorios": "Joyas y accesorios",
 }
 
 
@@ -316,14 +395,48 @@ def limpiar_anuncio(a: dict) -> dict:
     return {**a, "titulo": titulo, "descripcion": desc}
 
 
+def revisar_cola(lat: Latido) -> bool:
+    """Pone al día los anuncios viejos de la cola: categoría real y foto sin teléfonos ajenos."""
+    trabajo = False
+    for p in productos("en_cola"):
+        if PARAR.is_set() or pausado():
+            break
+        a = p.get("anuncio") or {}
+        if a.get("categoria") in CATEGORIAS_VIEJAS:
+            a["categoria"] = CATEGORIAS_VIEJAS[a["categoria"]]
+            guardar(p, None, "Categoría ajustada a Marketplace")
+        if a.get("foto_revisada"):
+            continue
+        lat.set("trabajando", f"Revisando la foto de: {p['nombre']}")
+        imagen = primera_imagen(p)
+        if imagen:
+            try:
+                r = chat_json(CONFIG["modelos"]["redactor"],
+                              "Revisas fotos de productos para Marketplace. Responde solo el JSON.",
+                              "¿La foto muestra un número de teléfono, WhatsApp, logo o marca de agua de otro "
+                              "vendedor? Describe en una frase qué se ve.", ESQUEMA_FOTO, imagenes=imagen)
+                a["foto_con_telefono_ajeno"] = bool(r["foto_con_telefono_ajeno"])
+            except Exception as e:  # noqa: BLE001
+                lat.error(f"Revisando foto de {p['nombre']}: {e}")
+                continue
+        a["foto_revisada"] = True
+        guardar(p, None, "Foto revisada")
+        if a.get("foto_con_telefono_ajeno"):
+            log("redactor", f"La foto principal de {p['nombre']} trae teléfono o marca ajena: se usará la siguiente")
+        trabajo = True
+    return trabajo
+
+
 def ciclo_redactor(lat: Latido) -> bool:
     trabajo = False
     lote = [p for p in productos("con_precio")
             if (p.get("evaluacion") or {}).get("decision") != "descartar" and (p.get("precio") or {}).get("precio")]
     lote = lote[: CONFIG["lote_por_ciclo"]]
     if not lote:
+        with turno(lat):
+            trabajo = revisar_cola(lat)
         lat.set(resumen={"en_cola": len(productos("en_cola"))})
-        return False
+        return trabajo
     with turno(lat):
         trabajo = redactar_lote(lat, lote)
     lat.set(resumen={"en_cola": len(productos("en_cola"))})
@@ -333,7 +446,7 @@ def ciclo_redactor(lat: Latido) -> bool:
 def redactar_lote(lat: Latido, lote: list[dict]) -> bool:
     trabajo = False
     for p in lote:
-        if PARAR.is_set():
+        if PARAR.is_set() or pausado():
             break
         lat.set("trabajando", f"Redactando anuncio: {p['nombre']}")
         try:
@@ -357,6 +470,7 @@ def redactar_lote(lat: Latido, lote: list[dict]) -> bool:
                 "fotos_url": p.get("imagenes") or [],
                 "modelo": CONFIG["modelos"]["redactor"],
                 "creado": ahora(),
+                "foto_revisada": True,
             }
             guardar(p, "en_cola", a["titulo"])
             log("redactor", f"Anuncio listo: {a['titulo']} {pesos(p['precio']['precio'])}")
@@ -376,11 +490,17 @@ def bucle(nombre: str, rol: str, ciclo) -> None:
     modelo = CONFIG["modelos"][nombre]
     lat = Latido(nombre, modelo, rol)
     while not PARAR.is_set():
+        if pausado():
+            if lat.datos["estado"] != "pausado":
+                log(nombre, "Pausado desde el panel")
+            lat.set("pausado", "Pausado. Dale «Seguir» en el panel o en la barra de menú.")
+            esperar(3600)
+            continue
         try:
             if not ollama_vivo():
                 lat.set("bloqueado", "Ollama no responde en " + CONFIG["ollama_url"])
                 lat.bloqueos(["Ollama apagado: abre la app de Ollama"])
-                PARAR.wait(60)
+                esperar(60)
                 continue
             hizo = ciclo(lat)
         except Exception as e:  # noqa: BLE001
@@ -394,7 +514,7 @@ def bucle(nombre: str, rol: str, ciclo) -> None:
         siguiente = datetime.now() + timedelta(seconds=espera)
         estado = "bloqueado" if lat.datos["bloqueos"] and nombre == "analista" and not productos("nuevo") else "esperando"
         lat.set(estado, f"Sin trabajo pendiente. Próxima revisión {siguiente:%H:%M}", siguiente=siguiente.isoformat())
-        PARAR.wait(espera)
+        esperar(espera)
     lat.set("detenido", "")
 
 

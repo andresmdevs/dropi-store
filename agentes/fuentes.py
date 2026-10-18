@@ -4,10 +4,12 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
+import subprocess
 import urllib.error
 import urllib.request
 
-from comun import CONFIG, PRODUCTOS, RAIZ, ahora, cargar_env, escribir_json, leer_json
+from comun import AGENTES, CONFIG, PRODUCTOS, RAIZ, ahora, cargar_env, escribir_json, leer_json
 
 CDN = "https://d39ru7awumhhs2.cloudfront.net/"
 
@@ -135,8 +137,38 @@ def _limpiar_html(t: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", t or "")).strip()
 
 
+def registrar_dropi(o: dict, fuente: str, busqueda: str | None = None) -> bool:
+    """Guarda un producto crudo de Dropi si es nuevo y tiene stock. Devuelve True si lo agregó."""
+    cfg = CONFIG["dropi_busqueda"]
+    pid = str(o.get("id") or "")
+    if not pid or existe(pid):
+        return False
+    stock = _stock(o)
+    if stock is not None and stock < cfg["stock_minimo"]:
+        return False
+    galeria = [g.get("urlS3") or g.get("url") for g in (o.get("gallery") or []) if isinstance(g, dict)]
+    categorias = [c.get("name") for c in (o.get("categories") or []) if isinstance(c, dict)]
+    escribir_json(ruta_producto(pid), nuevo_registro(
+        id=pid,
+        slug=slug(o.get("name", pid)),
+        nombre=o.get("name", ""),
+        fuente=fuente,
+        busqueda=busqueda,
+        categoria=", ".join(filter(None, categorias)) or None,
+        costo=_num(o.get("sale_price"), o.get("price")),
+        precio_sugerido=_num(o.get("suggested_price")),
+        precio_tienda=None,
+        stock=stock,
+        descripcion=_limpiar_html(o.get("description", ""))[:1500],
+        destacados=[],
+        imagenes=[g if g.startswith("http") else CDN + g for g in galeria if g],
+        imagenes_locales=[],
+    ))
+    return True
+
+
 def traer_catalogo_dropi() -> int:
-    """Busca por cada palabra clave y guarda los productos que aún no conocemos."""
+    """Busca por cada palabra clave en la API de Integraciones y guarda lo nuevo."""
     cfg = CONFIG["dropi_busqueda"]
     nuevos = 0
     for palabra in cfg["palabras"]:
@@ -144,30 +176,28 @@ def traer_catalogo_dropi() -> int:
             "startData": 0, "pageSize": cfg["por_pagina"], "order_type": "DESC", "order_by": "id",
             "keywords": palabra, "active": True, "no_count": True, "integration": True, "get_stock": True,
         })
-        for o in r.get("objects") or []:
-            pid = str(o.get("id"))
-            if not pid or existe(pid):
-                continue
-            stock = _stock(o)
-            if stock is not None and stock < cfg["stock_minimo"]:
-                continue
-            galeria = [g.get("urlS3") or g.get("url") for g in (o.get("gallery") or []) if isinstance(g, dict)]
-            categorias = [c.get("name") for c in (o.get("categories") or []) if isinstance(c, dict)]
-            escribir_json(ruta_producto(pid), nuevo_registro(
-                id=pid,
-                slug=slug(o.get("name", pid)),
-                nombre=o.get("name", ""),
-                fuente="dropi-api",
-                busqueda=palabra,
-                categoria=", ".join(filter(None, categorias)) or None,
-                costo=_num(o.get("sale_price"), o.get("price")),
-                precio_sugerido=_num(o.get("suggested_price")),
-                precio_tienda=None,
-                stock=stock,
-                descripcion=_limpiar_html(o.get("description", ""))[:1500],
-                destacados=[],
-                imagenes=[g if g.startswith("http") else CDN + g for g in galeria if g],
-                imagenes_locales=[],
-            ))
-            nuevos += 1
+        nuevos += sum(registrar_dropi(o, "dropi-api", palabra) for o in r.get("objects") or [])
     return nuevos
+
+
+class SinCatalogoWeb(Exception):
+    pass
+
+
+def traer_catalogo_web(paginas: int = 3) -> int:
+    """Repite la búsqueda del catálogo que aprendió el cotizador, con la sesión del navegador."""
+    uv = shutil.which("uv") or "/opt/homebrew/bin/uv"
+    proc = subprocess.run(
+        [uv, "run", "--quiet", "--with", "playwright==1.60.0", "python", str(AGENTES / "cotizador.py"),
+         "catalogo", "--paginas", str(paginas)],
+        cwd=AGENTES, capture_output=True, text=True, timeout=600,
+    )
+    if proc.returncode != 0:
+        motivo = ((proc.stderr or proc.stdout or "").strip().splitlines() or ["error"])[-1]
+        if "SIN_CATALOGO" in motivo:
+            raise SinCatalogoWeb("La búsqueda del catálogo aún no está aprendida (se aprende al calibrar el cotizador)")
+        if "SESION_VENCIDA" in motivo:
+            raise SinCatalogoWeb("La sesión de Dropi del navegador venció: usa «Reconectar Dropi» en el panel")
+        raise SinCatalogoWeb(f"Catálogo web falló: {motivo[:200]}")
+    lista = json.loads(proc.stdout.strip().splitlines()[-1])
+    return sum(registrar_dropi(o, "dropi-web") for o in lista)

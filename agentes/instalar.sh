@@ -14,7 +14,8 @@ cat > $PLIST <<PL
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
   <key>Label</key><string>$LABEL</string>
-  <key>ProgramArguments</key><array><string>/opt/homebrew/bin/python3</string><string>$DIR/orquestador.py</string></array>
+  <!-- caffeinate -i: el Mac no se duerme por inactividad mientras los agentes trabajan -->
+  <key>ProgramArguments</key><array><string>/usr/bin/caffeinate</string><string>-i</string><string>/opt/homebrew/bin/python3</string><string>$DIR/orquestador.py</string></array>
   <key>WorkingDirectory</key><string>$DIR</string>
   <key>EnvironmentVariables</key><dict><key>PATH</key><string>/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string></dict>
   <key>RunAtLoad</key><true/>

@@ -80,12 +80,16 @@ Si todavía no hay cotización, el agente usa el precio de la tienda
   que Facebook no lo trate como spam.
 
 **El clic en «Publicar» lo hago yo.** Los agentes dejan cada anuncio listo en la
-cola del panel con botones para copiar; publicar con un bot en Facebook va
-contra sus términos y es la forma más rápida de perder la cuenta.
+cola del panel. El botón **«Publicar con asistente»** abre Facebook con el
+formulario ya lleno (fotos, título, precio, categoría, estado y descripción);
+yo reviso y hago clic en «Publicar», y el producto pasa solo a «publicado».
+Publicar con un bot sin intervención va contra los términos de Facebook y es la
+forma más rápida de perder la cuenta.
 
 ### 5. Cuando entra un pedido
 
-1. El cliente escribe por Marketplace o WhatsApp.
+1. El cliente escribe por Marketplace o por WhatsApp al **311 791 8947** (el
+   número del negocio; el 300 842 7074 ya no se usa).
 2. Confirmo nombre, celular, dirección y ciudad.
 3. Creo la orden **real** en Dropi como contra entrega (`CON_RECAUDO`).
 4. Hago seguimiento hasta la entrega. Las devoluciones salen de mi ganancia.
@@ -100,8 +104,12 @@ contra sus términos y es la forma más rápida de perder la cuenta.
 4. No inventar características. Si el dato no está en Dropi, no va en el anuncio.
 5. Precios en pesos colombianos, sin decimales, con formato `$79.900`.
 6. Todo en español de Colombia, con tono cercano y sin exagerar.
-7. Si algo bloquea el trabajo (token vencido, cotizador sin calibrar, Ollama
-   apagado), se reporta en el panel y se sigue con lo que sí se puede hacer.
+7. Si algo bloquea el trabajo (token vencido, sesión caída, cotizador sin
+   calibrar, Ollama apagado), se reporta en el panel y se sigue con lo que sí se
+   puede hacer.
+8. El único teléfono del negocio es el **3117918947**. Si aparece el viejo
+   (3008427074) o el de otro vendedor en un texto o una foto, se corrige o se
+   salta esa foto.
 
 ## Quién hace qué
 
@@ -112,8 +120,11 @@ contra sus términos y es la forma más rápida de perder la cuenta.
 | Cotizar flete en 4 ciudades | `agentes/cotizador.py` | — |
 | Calcular precio promedio | `agentes/precios.py` | — |
 | Redactar el anuncio | Redactor | `gemma-work` |
-| Publicar en Marketplace | Yo, desde la cola del panel | — |
+| Revisar fotos (teléfonos o marcas de otros) | Redactor | `gemma-work` |
+| Publicar en Marketplace | Yo, con el asistente del panel | — |
 | Crear la orden real | Yo, en Dropi | — |
 
 El estado de los agentes y de todos los modelos locales se ve en el panel:
-<http://localhost:8790> (proyecto `~/code/personal/llm-panel`).
+<http://localhost:8790> (proyecto `~/code/personal/llm-panel`). La app
+**Monkey Agentes** (en Aplicaciones y en la barra de menú) lo arranca todo y
+permite pausar, seguir y reconectar las sesiones de Dropi y Facebook.

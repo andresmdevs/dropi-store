@@ -10,25 +10,69 @@
   "ciclo_segundos": 600,
   "lote_por_ciclo": 6,
   "catalogo_cada_horas": 6,
-
   "dropi_busqueda": {
-    "palabras": ["audifonos", "parlante", "smartwatch", "cargador", "masajeador", "luz led", "camara", "fitness", "proyector", "hogar"],
+    "palabras": [
+      "audifonos",
+      "parlante",
+      "smartwatch",
+      "cargador",
+      "masajeador",
+      "luz led",
+      "camara",
+      "fitness",
+      "proyector",
+      "hogar"
+    ],
     "por_pagina": 30,
     "stock_minimo": 20
   },
-
   "precios": {
-    "ciudades": ["BOGOTA", "MEDELLIN", "CALI", "BARRANQUILLA"],
+    "ciudades": [
+      "BOGOTA",
+      "MEDELLIN",
+      "CALI",
+      "BARRANQUILLA"
+    ],
     "ganancia_minima": 20000,
     "markup": 0.6,
     "terminacion": 900
   },
-
-  "ya_publicados_marketplace": ["base-carga-doble-control-ps3"],
-
+  "ya_publicados_marketplace": [
+    "base-carga-doble-control-ps3"
+  ],
   "marketplace": {
     "titulo_max": 80,
     "maximo_por_dia": 10,
-    "frases_fijas": ["Pago contra entrega en toda Colombia", "Envío incluido"]
+    "frases_fijas": [
+      "Pago contra entrega en toda Colombia",
+      "Envío incluido"
+    ],
+    "categorias": [
+      "Electrónica y computadoras",
+      "Celulares",
+      "Deportes y actividades al aire libre",
+      "Artículos para el hogar",
+      "Herramientas",
+      "Juguetes y juegos",
+      "Salud y belleza",
+      "Ropa y calzado de mujer",
+      "Ropa y calzado de hombre",
+      "Joyas y accesorios",
+      "Repuestos para autos",
+      "Artículos para mascotas",
+      "Videojuegos",
+      "Varios"
+    ]
+  },
+  "telefono": {
+    "actual": "3117918947",
+    "prohibidos": [
+      "3008427074"
+    ],
+    "_nota": "El verificador avisa si un número prohibido aparece en el código, en un anuncio o en una foto."
+  },
+  "publicacion": {
+    "maximo_por_dia": 10,
+    "fotos_maximo": 8
   }
 }
