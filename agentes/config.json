@@ -1,0 +1,34 @@
+{
+  "proyecto": "dropi-store",
+  "ollama_url": "http://localhost:11434",
+  "modelos": {
+    "analista": "qwen-tools",
+    "redactor": "gemma-work"
+  },
+  "num_ctx": 8192,
+  "keep_alive": "10m",
+  "ciclo_segundos": 600,
+  "lote_por_ciclo": 6,
+  "catalogo_cada_horas": 6,
+
+  "dropi_busqueda": {
+    "palabras": ["audifonos", "parlante", "smartwatch", "cargador", "masajeador", "luz led", "camara", "fitness", "proyector", "hogar"],
+    "por_pagina": 30,
+    "stock_minimo": 20
+  },
+
+  "precios": {
+    "ciudades": ["BOGOTA", "MEDELLIN", "CALI", "BARRANQUILLA"],
+    "ganancia_minima": 20000,
+    "markup": 0.6,
+    "terminacion": 900
+  },
+
+  "ya_publicados_marketplace": ["base-carga-doble-control-ps3"],
+
+  "marketplace": {
+    "titulo_max": 80,
+    "maximo_por_dia": 10,
+    "frases_fijas": ["Pago contra entrega en toda Colombia", "Envío incluido"]
+  }
+}

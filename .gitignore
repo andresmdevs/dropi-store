@@ -24,3 +24,6 @@ npm-debug.log*
 # python
 __pycache__/
 *.pyc
+
+# agentes locales (estado, sesión del navegador y calibración del cotizador)
+agentes/data/
