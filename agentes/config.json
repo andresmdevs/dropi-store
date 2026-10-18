@@ -116,11 +116,12 @@
       "BARRANQUILLA"
     ],
     "hashtags_base": [
-      "monkeystore",
+      "monkeysales",
       "pagocontraentrega",
       "envioscolombia",
       "comprasonline"
     ],
-    "_nota": "Publica como la Página y el Instagram de Monkey Store con la API oficial (docs/META-REDES.md). 3 publicaciones al día, sin repetir producto en 21 días."
+    "_nota": "Publica como la Página y el Instagram de Monkey Store con la API oficial (docs/META-REDES.md). 3 publicaciones al día, sin repetir producto en 21 días.",
+    "marca": "Monkey Sales"
   }
 }

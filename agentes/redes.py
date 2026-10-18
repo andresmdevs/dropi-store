@@ -199,7 +199,7 @@ def ciudad_del_turno() -> str:
     return ciudades[len(h.get("publicaciones", [])) % len(ciudades)]
 
 
-SISTEMA = """Eres el community manager de Monkey Store, una tienda colombiana que vende por redes con pago
+SISTEMA = """Eres el community manager de {marca}, una tienda colombiana que vende por redes con pago
 contra entrega y envío incluido a toda Colombia. Escribes en español de Colombia, cercano y claro, sin exagerar.
 
 Reglas:
@@ -231,7 +231,7 @@ def escribir(p: dict, ciudad: str) -> dict:
         "enlace": f"{SITIO}/producto/{p['slug']}" if p.get("fuente") == "catalogo-tienda" else None,
         "hashtags_base": R["hashtags_base"],
     }
-    t = chat_json(CONFIG["modelos"]["publicista"], SISTEMA,
+    t = chat_json(CONFIG["modelos"]["publicista"], SISTEMA.format(marca=R.get("marca", "Monkey Store")),
                   "Escribe la publicación para la Página de Facebook y para Instagram:\n"
                   + json.dumps(datos, ensure_ascii=False), ESQUEMA)
     etiquetas = []
