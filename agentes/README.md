@@ -7,6 +7,7 @@ Dos agentes con modelos de Ollama que trabajan solos sobre el proceso de
 |---|---|---|
 | analista | `qwen-tools` | Trae catálogo de Dropi, evalúa cada producto, cotiza el flete y pone el precio |
 | redactor | `gemma-work` | Mira la foto y escribe el anuncio de Marketplace; lo deja en la cola. Marca las fotos con teléfonos o marcas de otros vendedores |
+| publicista | `gemma-work` | Publica 3 veces al día en la Página y el Instagram de Monkey Store con la API oficial de Meta ([guía](../docs/META-REDES.md)) |
 
 El estado de los dos, y de cualquier otro proyecto que use Ollama, se ve en
 **http://localhost:8790** (`~/code/personal/llm-panel`).

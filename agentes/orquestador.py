@@ -29,6 +29,7 @@ from datetime import datetime, timedelta
 
 import fuentes
 import precios
+import redes
 from comun import (AGENTES, CONFIG, DATOS, LATIDOS, PRODUCTOS, RAIZ, Latido, ahora, chat_json,
                    escribir_json, leer_json, log, ollama_vivo)
 
@@ -494,6 +495,59 @@ def redactar_lote(lat: Latido, lote: list[dict]) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Publicista (gemma-work): Página de Facebook e Instagram de Monkey Store
+# ---------------------------------------------------------------------------
+
+def ciclo_publicista(lat: Latido) -> bool:
+    """En cada turno del día (config redes.horas) publica un producto con la API oficial de Meta."""
+    resumen = {"próximo turno": redes.proximo_turno() or "—",
+               "publicados": len((leer_json(redes.HISTORIAL, {}) or {}).get("publicaciones", []))}
+    if control().get("redes_pausado"):
+        lat.set("pausado", "Publicación en redes pausada desde el panel", resumen=resumen)
+        lat.bloqueos([])
+        return False
+    try:
+        redes.credenciales()
+    except redes.MetaError as e:
+        lat.bloqueos([str(e)])
+        lat.set("bloqueado", "Esperando la conexión con Meta (Página e Instagram de Monkey Store)", resumen=resumen)
+        return False
+    conexion = (leer_json(redes.HISTORIAL, {}) or {}).get("conexion") or {}
+    revisada = conexion.get("cuando")
+    if not revisada or datetime.fromisoformat(revisada) < datetime.now().astimezone() - timedelta(hours=1):
+        conexion = redes.verificar()
+    if not conexion.get("ok"):
+        lat.bloqueos([f"Meta: {conexion.get('error')}"])
+        lat.set("bloqueado", "La conexión con Meta falló", resumen=resumen)
+        return False
+    lat.bloqueos([conexion["aviso"]] if conexion.get("aviso") else [])
+
+    turno_hora = redes.turno_pendiente()
+    if turno_hora is None:
+        lat.set("esperando", f"Próxima publicación {resumen['próximo turno']} en "
+                             f"{conexion.get('pagina')} / @{conexion.get('instagram') or '—'}", resumen=resumen)
+        return False
+    p = redes.elegir()
+    if not p:
+        redes.marcar_turno(turno_hora, "Sin productos con precio cotizado")
+        lat.bloqueos(["No hay productos listos para redes: necesitan precio con flete cotizado (no provisional)"])
+        return False
+    with turno(lat):
+        lat.set("trabajando", f"Publicando en Página e Instagram: {p['nombre']}", resumen=resumen)
+        try:
+            r = redes.publicar(p)
+            redes.marcar_turno(turno_hora, f"Publicado: {p['nombre']}")
+            log("publicista", f"Publicado {p['nombre']}: FB {(r.get('facebook') or {}).get('url')} "
+                              f"IG {(r.get('instagram') or {}).get('url')}")
+            lat.hecho()
+        except Exception as e:  # noqa: BLE001
+            redes.marcar_turno(turno_hora, f"Error: {e}")
+            lat.error(f"Publicando {p['nombre']}: {e}")
+            log("publicista", f"ERROR publicando {p['id']}: {e}")
+    return True
+
+
+# ---------------------------------------------------------------------------
 # Bucle
 # ---------------------------------------------------------------------------
 
@@ -521,10 +575,11 @@ def bucle(nombre: str, rol: str, ciclo) -> None:
         if hizo:
             continue
         # El redactor depende de lo que deje el analista: revisa cada minuto.
-        espera = 60 if nombre == "redactor" else CONFIG["ciclo_segundos"]
+        espera = 60 if nombre in ("redactor", "publicista") else CONFIG["ciclo_segundos"]
         siguiente = datetime.now() + timedelta(seconds=espera)
-        estado = "bloqueado" if lat.datos["bloqueos"] and nombre == "analista" and not productos("nuevo") else "esperando"
-        lat.set(estado, f"Sin trabajo pendiente. Próxima revisión {siguiente:%H:%M}", siguiente=siguiente.isoformat())
+        if nombre != "publicista":  # el publicista ya dejó su propio estado
+            estado = "bloqueado" if lat.datos["bloqueos"] and nombre == "analista" and not productos("nuevo") else "esperando"
+            lat.set(estado, f"Sin trabajo pendiente. Próxima revisión {siguiente:%H:%M}", siguiente=siguiente.isoformat())
         esperar(espera)
     lat.set("detenido", "")
 
@@ -551,6 +606,8 @@ def main() -> None:
     hilos = [
         threading.Thread(target=bucle, args=("analista", "Evalúa, cotiza y pone precio", ciclo_analista), daemon=True),
         threading.Thread(target=bucle, args=("redactor", "Redacta anuncios de Marketplace", ciclo_redactor), daemon=True),
+        threading.Thread(target=bucle, args=("publicista", "Publica en la Página y el Instagram de Monkey Store",
+                                             ciclo_publicista), daemon=True),
     ]
     for h in hilos:
         h.start()

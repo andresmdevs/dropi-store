@@ -87,7 +87,13 @@ panel. Al terminar marco «Ya lo publiqué».
 Publicar con un bot sin intervención va contra los términos de Facebook y es la
 forma más rápida de perder la cuenta.
 
-### 5. Cuando entra un pedido
+### 5. Página de Facebook e Instagram (automático)
+
+El agente publicista publica tres veces al día como la Página y el Instagram de
+Monkey Store, con la API oficial de Meta: nunca como mi perfil personal, nunca en
+grupos. Solo productos con precio cotizado. Configuración: `docs/META-REDES.md`.
+
+### 6. Cuando entra un pedido
 
 1. El cliente escribe por Marketplace o por WhatsApp al **311 791 8947** (el
    número del negocio; el anterior ya no se usa).
@@ -123,6 +129,7 @@ forma más rápida de perder la cuenta.
 | Redactar el anuncio | Redactor | `gemma-work` |
 | Revisar fotos (teléfonos o marcas de otros) | Redactor | `gemma-work` |
 | Publicar en Marketplace | Yo, desde mi Chrome con lo que prepara el panel | — |
+| Publicar en la Página e Instagram de Monkey Store (3 al día) | Publicista, con la API oficial de Meta | `gemma-work` |
 | Crear la orden real | Yo, en Dropi | — |
 
 El estado de los agentes y de todos los modelos locales se ve en el panel:

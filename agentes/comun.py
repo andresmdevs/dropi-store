@@ -141,6 +141,16 @@ def ollama_vivo() -> bool:
 
 def chat_json(modelo: str, sistema: str, usuario: str, esquema: dict,
               imagenes: list[bytes] | None = None, timeout: int = 600) -> dict:
+    """Como _chat_json, con un reintento: Ollama a veces da 500 o corta el JSON."""
+    try:
+        return _chat_json(modelo, sistema, usuario, esquema, imagenes, timeout)
+    except (RuntimeError, json.JSONDecodeError, urllib.error.URLError):
+        time.sleep(3)
+        return _chat_json(modelo, sistema, usuario, esquema, imagenes, timeout)
+
+
+def _chat_json(modelo: str, sistema: str, usuario: str, esquema: dict,
+               imagenes: list[bytes] | None = None, timeout: int = 600) -> dict:
     """Pide al modelo una respuesta que cumpla `esquema` (salida estructurada de Ollama)."""
     mensaje = {"role": "user", "content": usuario}
     if imagenes:
