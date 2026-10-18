@@ -25,6 +25,7 @@ import argparse
 import copy
 import json
 import re
+import subprocess
 import sys
 import unicodedata
 
@@ -232,6 +233,51 @@ def calibrar() -> None:
           else "⚠️  No vi la búsqueda del catálogo: abre el catálogo con tus filtros durante la calibración.")
 
 
+def aprender_busqueda() -> None:
+    """Abre Dropi; pones filtros en el catálogo, aplicas y cierras la ventana. Guarda esa búsqueda."""
+    from playwright.sync_api import sync_playwright
+
+    capturas = []
+    with sync_playwright() as p, navegador.abrir(p, "dropi", visible=True, esperar=True) as ctx:
+
+        def al_responder(r):
+            req = r.request
+            if req.resource_type in ("xhr", "fetch") and "products/v4/index" in req.url:
+                try:
+                    texto = r.text()
+                except Exception:  # noqa: BLE001
+                    return
+                capturas.append({"metodo": req.method, "url": req.url, "estado": r.status,
+                                 "headers": {k: v for k, v in req.headers.items() if AUTH.search(k)},
+                                 "cuerpo": req.post_data, "respuesta": texto[:400_000]})
+
+        ctx.on("response", al_responder)
+        page = navegador.pagina(ctx)
+        page.goto(INICIO)
+        print("Pon los filtros en el catálogo («Con órdenes», categoría, orden), dale «Aplicar filtros» "
+              "y cierra la ventana cuando veas los productos.")
+        while ctx.pages:
+            try:
+                ctx.pages[-1].wait_for_timeout(1000)
+            except Exception:  # noqa: BLE001
+                break
+    # La última búsqueda de la primera página es la que quedó con tus filtros.
+    primeras = [c for c in capturas if (a_json(c["cuerpo"]) or {}).get("startData", 0) in (0, None)]
+    catalogo = detectar_catalogo(primeras or capturas)
+    if not catalogo:
+        print("⚠️  No vi ninguna búsqueda del catálogo.")
+        return
+    cal = leer_json(CALIBRACION, {}) or {}
+    cal["catalogo"] = catalogo
+    escribir_json(CALIBRACION, cal)
+    CALIBRACION.chmod(0o600)
+    filtros = {k: v for k, v in (catalogo["cuerpo"] or {}).items() if k not in ("pageSize", "startData")}
+    print("✅ Búsqueda aprendida:", json.dumps(filtros, ensure_ascii=False))
+    subprocess.run(["/usr/bin/osascript", "-e",
+                    'display notification "Búsqueda de Dropi aprendida ✅" with title "Monkey Agentes"'],
+                   capture_output=True)
+
+
 def analizar(capturas, ciudad, flete, producto, precio) -> dict:
     ciudades = []
     for c in capturas:
@@ -300,15 +346,11 @@ def extraer_fletes(resp, ruta_general):
 # Repetir peticiones con la sesión del navegador
 # ---------------------------------------------------------------------------
 
-FETCH = """async ([url, metodo, headers, cuerpo]) => {
-    const r = await fetch(url, {method: metodo, headers: {...headers, 'content-type': 'application/json'},
-                                 body: metodo === 'GET' ? undefined : cuerpo});
-    return {estado: r.status, texto: await r.text()};
-}"""
-
-
 class Sesion:
-    """Abre Dropi con el perfil del agente y toma las cabeceras de autenticación vigentes."""
+    """Abre Dropi con el perfil del agente y toma las cabeceras de autenticación vigentes.
+
+    Las peticiones salen desde la propia página, con las mismas cabeceras que usa la web.
+    """
 
     def __init__(self, p, nombres_auth):
         self._cm = navegador.abrir(p, "dropi", visible=False)
@@ -316,7 +358,7 @@ class Sesion:
         self.auth = {}
 
     def __enter__(self):
-        ctx = self._cm.__enter__()
+        self.ctx = self._cm.__enter__()
 
         def al_pedir(req):
             if "api.dropi" in req.url:
@@ -324,11 +366,11 @@ class Sesion:
                     if k in self.nombres:
                         self.auth[k] = v
 
-        ctx.on("request", al_pedir)
-        self.page = navegador.pagina(ctx)
+        self.ctx.on("request", al_pedir)
+        self.page = navegador.pagina(self.ctx)
         self.page.goto(INICIO)
         self.page.wait_for_timeout(8000)
-        if not navegador.dropi_conectado(self.page) or not self.auth:
+        if not navegador.dropi_conectado(self.page) or not self.auth.get("x-authorization"):
             navegador.marcar_sesion("dropi", False, "Sesión vencida: hay que reconectar")
             self._cm.__exit__(None, None, None)
             raise SystemExit("SESION_VENCIDA")
@@ -336,43 +378,107 @@ class Sesion:
         return self
 
     def pedir(self, url, metodo, cuerpo):
-        return self.page.evaluate(FETCH, [url, metodo, self.auth, json.dumps(cuerpo) if cuerpo is not None else None])
+        """Hace la petición desde la página de Dropi, igual que su web (el firewall bloquea otras vías)."""
+        cabeceras = dict(self.auth)
+        if cuerpo is not None:
+            cabeceras["content-type"] = "application/json"
+        return self.page.evaluate(
+            """async ([url, metodo, headers, cuerpo]) => {
+                const r = await fetch(url, {method: metodo, headers, body: cuerpo ?? undefined});
+                return {estado: r.status, texto: await r.text()};
+            }""",
+            [url, metodo, cabeceras, json.dumps(cuerpo) if cuerpo is not None else None],
+        )
 
     def __exit__(self, *exc):
         return self._cm.__exit__(*exc)
 
 
+API = "https://api.dropi.co/api"
+AUTH_DROPI = ["x-authorization", "x-captcha-token"]
+
+
+def _objetos(r):
+    if r["estado"] >= 400:
+        raise RuntimeError(f"Dropi respondió {r['estado']}: {r['texto'][:150]}")
+    j = a_json(r["texto"]) or {}
+    return j.get("objects") if isinstance(j, dict) else j
+
+
+def _numero(v, defecto=1):
+    try:
+        n = float(v)
+        return int(n) if n.is_integer() else n
+    except (TypeError, ValueError):
+        return defecto
+
+
 def cotizar(ids: list[str]) -> dict:
+    """Cotiza el flete como el formulario «Crear orden» de Dropi, sin crear nada.
+
+    Por cada ciudad: ciudades del departamento (trajectory/bycity), bodega de origen
+    del producto (getOriginCityForCalculateShipping) y cotización por transportadora
+    (cotizaEnvioTransportadoraV2). Devuelve {id: {CIUDAD: flete más barato}} y deja
+    el detalle por transportadora en data/cotizaciones/<id>.json.
+    """
     from playwright.sync_api import sync_playwright
 
-    cal = leer_json(CALIBRACION)
-    if not cal or not cal.get("ok"):
-        raise SystemExit("SIN_CALIBRAR")
-    if PROHIBIDO.search(cal["url"]) and not PERMITIDO.search(cal["url"]):
-        raise SystemExit("La URL calibrada parece crear órdenes; se rechaza por seguridad.")
-
+    ciudades = CONFIG["precios"]["ciudades_dropi"]
+    detalle_dir = DATOS / "cotizaciones"
+    detalle_dir.mkdir(exist_ok=True)
     salida = {}
-    with sync_playwright() as p, Sesion(p, cal["headers_auth"]) as s:
+    with sync_playwright() as p, Sesion(p, AUTH_DROPI) as s:
+        por_depto = {}
         for pid in ids:
             prod = leer_json(PRODUCTOS / f"{pid}.json", {})
-            precio = prod.get("precio_tienda") or prod.get("precio_sugerido") or (prod.get("costo") or 0) * 2
-            fletes = {}
-            for nombre in CONFIG["precios"]["ciudades"]:
-                destino = buscar_ciudad(cal["ciudades"], nombre)
-                if not destino:
-                    continue
-                cuerpo = copy.deepcopy(cal["cuerpo"])
-                for ruta, atributo in cal["rutas_ciudad"].items():
-                    if atributo in destino:
-                        poner(cuerpo, json.loads(ruta), destino[atributo])
-                for ruta in map(json.loads, cal["rutas_producto"]):
-                    poner(cuerpo, ruta, mismo_tipo(obtener(cal["cuerpo"], ruta), pid))
-                for ruta in map(json.loads, cal["rutas_precio"]):
-                    poner(cuerpo, ruta, mismo_tipo(obtener(cal["cuerpo"], ruta), precio))
-                r = s.pedir(cal["url"], cal["metodo"], cuerpo)
-                valores = extraer_fletes(a_json(r["texto"]), cal["ruta_flete"]) if r["estado"] < 400 else []
-                if valores:
-                    fletes[nombre] = min(valores)
+            try:
+                ficha = _objetos(s.pedir(f"{API}/products/productlist/v1/show/?id={pid}", "GET", None))
+            except RuntimeError as e:
+                salida[pid] = {}
+                print(f"{pid}: sin ficha ({e})", file=sys.stderr)
+                continue
+            precio = (prod.get("precio_tienda") or prod.get("precio_sugerido")
+                      or _numero(ficha.get("suggested_price"), 0) or (prod.get("costo") or 0) * 2)
+            variacion = None
+            if ficha.get("type") != "SIMPLE" and ficha.get("variations"):
+                variacion = ficha["variations"][0].get("id")
+            fletes, detalle = {}, {}
+            for nombre, info in ciudades.items():
+                try:
+                    depto = info["departamento_id"]
+                    if depto not in por_depto:
+                        r = _objetos(s.pedir(f"{API}/trajectory/bycity", "POST",
+                                             {"department_id": depto, "rate_type": "CON RECAUDO"}))
+                        por_depto[depto] = r.get("cities", []) if isinstance(r, dict) else (r or [])
+                    destino = next((c for c in por_depto[depto] if c.get("id") == info["id"]), None)
+                    if not destino:
+                        continue
+                    origen = _objetos(s.pedir(f"{API}/orders/getOriginCityForCalculateShipping", "POST", {
+                        "id": int(pid), "destination": f"{nombre.lower()}, {info['departamento'].lower()}",
+                        "type": ficha.get("type", "SIMPLE"), "is_edit_order": False}))
+                    bodega = origen["warehouse"]
+                    cuerpo = {
+                        "peso": _numero(ficha.get("weight")), "largo": _numero(ficha.get("length")),
+                        "ancho": _numero(ficha.get("width")), "alto": _numero(ficha.get("height")),
+                        "ciudad_remitente": bodega["city"], "ciudad_destino": destino,
+                        "EnvioConCobro": True,
+                        "products": [{**ficha, "quantity": 1, "price": precio, "variation_id": variacion}],
+                        "ValorDeclarado": precio, "warehouse": bodega,
+                        "zip_code": None, "colonia": None, "dir": "Calle 1 # 1-1",
+                        "destination_name": "Cotizacion Prueba", "destination_phone": "3000000000",
+                        "insurance": False,
+                    }
+                    resp = _objetos(s.pedir(f"{API}/orders/cotizaEnvioTransportadoraV2", "POST", cuerpo)) or []
+                    por_transportadora = {x.get("transportadora"): (x.get("objects") or {}).get("precioEnvio")
+                                          for x in resp if isinstance(x, dict)}
+                    validos = [v for v in por_transportadora.values() if isinstance(v, (int, float)) and v > 0]
+                    detalle[nombre] = {"origen": bodega["city"].get("name"), "transportadoras": por_transportadora}
+                    if validos:
+                        fletes[nombre] = int(round(min(validos)))
+                except Exception as e:  # noqa: BLE001
+                    detalle[nombre] = {"error": str(e)[:200]}
+            escribir_json(detalle_dir / f"{pid}.json", {"cuando": ahora(), "precio_declarado": precio,
+                                                       "fletes": fletes, "detalle": detalle})
             salida[pid] = fletes
     return salida
 
@@ -409,13 +515,15 @@ def catalogo(paginas: int) -> list[dict]:
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("modo", choices=["calibrar", "cotizar", "catalogo"])
+    ap.add_argument("modo", choices=["calibrar", "cotizar", "catalogo", "aprender-busqueda"])
     ap.add_argument("--ids", default="")
     ap.add_argument("--paginas", type=int, default=3)
     a = ap.parse_args()
     try:
         if a.modo == "calibrar":
             calibrar()
+        elif a.modo == "aprender-busqueda":
+            aprender_busqueda()
         elif a.modo == "cotizar":
             print(json.dumps(cotizar([i for i in a.ids.split(",") if i])))
         else:

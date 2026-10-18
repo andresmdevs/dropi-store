@@ -18,6 +18,9 @@ SITIOS = {
     "facebook": {"inicio": "https://www.facebook.com/marketplace/you/selling", "login": "https://www.facebook.com/login"},
 }
 SESIONES = DATOS / "sesiones.json"
+UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) "
+      "Chrome/148.0.0.0 Safari/537.36")
+SEC_CH_UA = '"Chromium";v="148", "Google Chrome";v="148", "Not/A)Brand";v="24"'
 
 
 def perfil(sitio: str):
@@ -52,11 +55,13 @@ def abrir(p, sitio: str, visible: bool, esperar: bool = False):
         headless=not visible,
         viewport={"width": 1280, "height": 860},
         locale="es-CO",
+        # Sin esto Chromium invisible se presenta como «HeadlessChrome» y el firewall de
+        # Dropi responde 403 a todo.
+        user_agent=UA,
+        extra_http_headers={"sec-ch-ua": SEC_CH_UA},
         args=["--disable-blink-features=AutomationControlled"],
         ignore_default_args=["--enable-automation"],
     )
-    if sitio == "facebook":
-        opciones["channel"] = "chrome"  # Chrome real: Facebook desconfía menos que de Chromium
     try:
         try:
             ctx = p.chromium.launch_persistent_context(str(carpeta), **opciones)

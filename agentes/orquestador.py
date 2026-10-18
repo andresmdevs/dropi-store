@@ -152,6 +152,14 @@ ESQUEMA_EVALUACION = {
 }
 
 
+# Red de seguridad: el modelo pequeño a veces deja pasar productos prohibidos en Marketplace.
+PROHIBIDOS = re.compile(
+    r"\b(vitamin\w*|suplement\w*|gomitas?|gummies|col[aá]geno|c[aá]psulas?|tabletas?|medicament\w*|"
+    r"prote[ií]na|creatina|magnesio|omega\s*3|cbd|cannabis|keto|adelgaz\w*|quema\s*grasa|"
+    r"r[eé]plica|aaa|1\.1|arma\w*|pistola\s+de\s+(aire|balines)|navaja|er[oó]tic\w*|sexual\w*|vape|vaper|"
+    r"cigarr\w*|perfume\w*|fragancia\w*)\b", re.I)
+
+
 def evaluar(p: dict) -> dict:
     datos = {
         "nombre": p["nombre"], "categoria": p.get("categoria"), "costo_proveedor": p.get("costo"),
@@ -160,6 +168,10 @@ def evaluar(p: dict) -> dict:
     }
     r = chat_json(CONFIG["modelos"]["analista"], SISTEMA_ANALISTA,
                   "Evalúa este producto:\n" + json.dumps(datos, ensure_ascii=False), ESQUEMA_EVALUACION)
+    encontrado = PROHIBIDOS.search(f"{p.get('nombre', '')} {p.get('categoria') or ''}")
+    if encontrado and "pistola de masaje" not in p.get("nombre", "").lower():
+        r["prohibido_marketplace"] = True
+        r["razon"] = f"Prohibido en Marketplace («{encontrado.group(0)}»). " + r.get("razon", "")
     if r.get("prohibido_marketplace"):
         r["decision"] = "descartar"
     elif r["decision"] == "descartar" and r["puntaje"] >= 40:
@@ -174,9 +186,6 @@ def cotizar_lote(ids: list[str]) -> tuple[dict, str | None]:
     faltan = [i for i in ids if i not in resultado]
     if not faltan:
         return resultado, None
-    if not (DATOS / "calibracion.json").exists():
-        return resultado, ("Cotizador sin calibrar: corre una vez "
-                           "`uv run --with playwright==1.60.0 python agentes/cotizador.py calibrar`")
     uv = shutil.which("uv") or "/opt/homebrew/bin/uv"
     proc = subprocess.run(
         [uv, "run", "--quiet", "--with", "playwright==1.60.0", "python", str(AGENTES / "cotizador.py"),
@@ -187,7 +196,9 @@ def cotizar_lote(ids: list[str]) -> tuple[dict, str | None]:
     if proc.returncode != 0:
         motivo = (proc.stderr or proc.stdout or "").strip().splitlines()[-1:] or ["error"]
         if "SESION_VENCIDA" in motivo[0]:
-            return resultado, "La sesión de Dropi del cotizador venció: corre de nuevo la calibración e inicia sesión"
+            return resultado, "La sesión de Dropi se cayó: usa «Reconectar Dropi» en el panel"
+        if "OCUPADO" in motivo[0]:
+            return resultado, None  # el navegador de Dropi está en uso; se reintenta en el próximo ciclo
         return resultado, f"Cotizador falló: {motivo[0][:200]}"
     try:
         resultado.update(json.loads(salida[-1]))

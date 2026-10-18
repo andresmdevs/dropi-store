@@ -35,7 +35,29 @@
     ],
     "ganancia_minima": 20000,
     "markup": 0.6,
-    "terminacion": 900
+    "terminacion": 900,
+    "ciudades_dropi": {
+      "BOGOTA": {
+        "id": 50,
+        "departamento_id": 3,
+        "departamento": "CUNDINAMARCA"
+      },
+      "MEDELLIN": {
+        "id": 266,
+        "departamento_id": 13,
+        "departamento": "ANTIOQUIA"
+      },
+      "CALI": {
+        "id": 1221,
+        "departamento_id": 12,
+        "departamento": "VALLE"
+      },
+      "BARRANQUILLA": {
+        "id": 42,
+        "departamento_id": 22,
+        "departamento": "ATLANTICO"
+      }
+    }
   },
   "ya_publicados_marketplace": [
     "base-carga-doble-control-ps3"

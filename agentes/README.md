@@ -29,10 +29,15 @@ el panel en http://localhost:8790:
 
 - **Pausar / Seguir / Trabajar ahora**: escriben `data/control.json`; los agentes
   terminan lo que estén haciendo y obedecen.
-- **Reconectar Dropi / Facebook**: abre una ventana con el perfil del agente
-  (`data/navegador-dropi`, `data/navegador-facebook`); inicias sesión y se cierra sola.
-- **Publicar con asistente**: llena el formulario de Marketplace y te deja el clic
-  final.
+- **Reconectar Dropi**: abre una ventana con el perfil de los agentes
+  (`data/navegador-dropi`). Si la sesión sigue viva te avisa y se cierra; si no,
+  inicias sesión ahí. (Chrome no deja que un programa maneje tu perfil normal,
+  por eso los agentes tienen el suyo.)
+- **Aprender búsqueda de Dropi**: abre el catálogo; pones los filtros con los que
+  encuentras productos top («Con órdenes», categoría, orden), aplicas y cierras la
+  ventana. Los agentes repiten esa búsqueda.
+- **Publicar en mi Chrome**: abre Marketplace en tu Chrome con tu sesión, deja la
+  descripción copiada y las fotos en Finder; título y precio se copian del panel.
 
 El servicio corre con `caffeinate -i`, así el Mac no se duerme por inactividad
 mientras trabaja (cerrar la tapa sí lo duerme).
@@ -49,7 +54,11 @@ tail -f agentes/data/logs/launchd.log     # qué está haciendo
 1. **Token de Dropi** (opcional si calibras): Dropi → Integraciones → Generar
    token, y pegarlo en `.env.local` como `DROPI_INTEGRATION_KEY`. Si no hay token,
    el analista usa la búsqueda del catálogo que aprende la calibración.
-2. **Calibrar el cotizador** (unos 3 minutos):
+2. **Cotización de fletes**: ya no hay que calibrar nada. El analista cotiza como el
+   formulario «Crear orden» de Dropi (ciudades del departamento, bodega de origen del
+   producto y tarifa de cada transportadora), toma la más barata por ciudad y deja el
+   detalle en `data/cotizaciones/<id>.json`. Solo necesita la sesión de Dropi activa.
+   La calibración completa sigue disponible por si Dropi cambia su web:
    ```bash
    cd agentes && uv run --with playwright==1.60.0 python cotizador.py calibrar
    ```
@@ -59,8 +68,9 @@ tail -f agentes/data/logs/launchd.log     # qué está haciendo
    terminal la ciudad y el valor que viste. Desde ahí el analista trae productos
    con esa búsqueda, cotiza las 4 ciudades de cada uno y reemplaza los precios
    provisionales.
-3. **Conectar Facebook** una vez con «Reconectar Facebook», para que el
-   asistente de publicación pueda abrir el formulario.
+3. Los productos prohibidos en Marketplace (suplementos, réplicas, armas, perfumes…)
+   se descartan con una regla fija además del criterio del modelo (`PROHIBIDOS` en
+   `orquestador.py`).
 
 Si prefieres no calibrar, puedes poner los fletes a mano en
 `agentes/data/fletes_manuales.json`:
