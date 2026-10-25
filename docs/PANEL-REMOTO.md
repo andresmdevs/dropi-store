@@ -22,13 +22,32 @@ los casos inciertos se dejan para revisión humana.
 
 ## Despliegue en Render
 
+El Blueprint está configurado en el plan gratuito para permitir una prueba sin
+crear recursos de pago. Es solo una modalidad de demostración, no adecuada para
+depender de ella al atender clientes:
+
+- El servicio web gratuito se duerme tras 15 minutos sin tráfico y puede tardar
+  alrededor de un minuto en volver. Mientras el puente del Mac consulta cada
+  10 segundos, normalmente lo mantendrá activo; cuando el Mac/puente estén
+  desconectados, los webhooks pueden demorarse durante el arranque en frío.
+- PostgreSQL gratuito tiene 1 GB, no ofrece copias de seguridad administradas y
+  vence 30 días después de crearse. Tras vencer, hay 14 días para actualizarlo
+  antes de que Render elimine la base y sus datos. Render también puede reiniciar
+  o poner la base en mantenimiento.
+- Antes de usarlo con clientes, exportar los datos necesarios y actualizar la
+  base a un plan con persistencia apropiada; no confiar la única copia de una
+  cola activa a esta base gratuita.
+
 1. Crear un Blueprint desde `render.yaml`. Este crea el servicio web y la base
-   PostgreSQL. Confirmar el precio recurrente de los recursos mostrados por
-   Render antes de crear el Blueprint.
+   PostgreSQL gratuitos. Revisar que Render muestre ambos recursos como
+   gratuitos antes de confirmar; si solicita un plan de pago, detenerse y no
+   confirmar.
 2. Crear una GitHub OAuth App:
    - Homepage: `https://monkey-store-interacciones.onrender.com`
    - Callback: `https://monkey-store-interacciones.onrender.com/auth/github/callback`
    - Scope: `read:user`
+   El acceso se restringe al login GitHub `andresmdevs` (la cuenta asociada al
+   correo indicado); la autorización compara el nombre de usuario, no el correo.
 3. En la configuración del servicio Render, añadir `GITHUB_OAUTH_CLIENT_ID` y
    `GITHUB_OAUTH_CLIENT_SECRET` como secretos. El Blueprint limita el login a
    `PANEL_GITHUB_USERS`; `PANEL_SESSION_SECRET` y
