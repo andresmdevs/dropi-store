@@ -8,7 +8,12 @@ DIR=${0:A:h}
 PLIST=~/Library/LaunchAgents/$LABEL.plist
 mkdir -p $DIR/data/logs
 launchctl bootout gui/$(id -u)/$LABEL 2>/dev/null || true
-if [[ "$1" == "quitar" ]]; then rm -f $PLIST; echo "Agentes detenidos y desinstalados"; exit 0; fi
+if [[ "$1" == "quitar" ]]; then
+  rm -f $PLIST
+  "$DIR/panel_puente.sh" quitar
+  echo "Agentes detenidos y desinstalados"
+  exit 0
+fi
 cat > $PLIST <<PL
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -26,4 +31,5 @@ cat > $PLIST <<PL
 </dict></plist>
 PL
 launchctl bootstrap gui/$(id -u) $PLIST
-echo "Agentes corriendo. Estado: http://localhost:8790   Log: $DIR/data/logs/launchd.log"
+"$DIR/panel_puente.sh"
+echo "Agentes y puente remoto corriendo. Estado local: http://localhost:8790"

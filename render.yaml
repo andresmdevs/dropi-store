@@ -1,0 +1,29 @@
+databases:
+  - name: monkey-store-interacciones-db
+    databaseName: monkey_store_interacciones
+    user: monkey_store_interacciones
+    plan: basic-256mb
+    region: oregon
+
+services:
+  - type: web
+    name: monkey-store-interacciones
+    runtime: python
+    plan: starter
+    region: oregon
+    buildCommand: pip install -r requirements-render.txt
+    startCommand: python agentes/webhook_render.py
+    healthCheckPath: /healthz
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: monkey-store-interacciones-db
+          property: connectionString
+      - key: INTERACCIONES_QUEUE_TOKEN
+        generateValue: true
+      - key: PANEL_PUBLIC_URL
+        value: https://monkey-store-interacciones.onrender.com
+      - key: PANEL_GITHUB_USERS
+        value: andresmdevs
+      - key: PANEL_SESSION_SECRET
+        generateValue: true

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <meta name="description" content="Estado remoto de los agentes de Monkey Store">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/panel-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <title>Monkey Store · Agentes</title>
+  <style>
+    :root { color-scheme: light dark; --bg:#f3f4f6; --card:#fff; --ink:#111827; --muted:#667085;
+      --line:#e5e7eb; --accent:#4f46e5; --green:#15803d; --amber:#b45309; --red:#b91c1c; }
+    @media (prefers-color-scheme:dark) { :root { --bg:#111318; --card:#1b1f27; --ink:#f3f4f6;
+      --muted:#a3aab8; --line:#303642; --accent:#a5b4fc; --green:#4ade80; --amber:#fbbf24; --red:#f87171; } }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    header { position:sticky; top:0; z-index:2; display:flex; justify-content:space-between; align-items:center;
+      gap:12px; padding:14px max(16px,env(safe-area-inset-left)); background:var(--card); border-bottom:1px solid var(--line); }
+    h1 { font-size:18px; margin:0; } h2 { margin:24px 0 10px; font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
+    main { max-width:920px; margin:auto; padding:0 16px calc(40px + env(safe-area-inset-bottom)); }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr)); gap:10px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; min-width:0; }
+    .row { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .muted, small { color:var(--muted); } .muted { font-size:13px; }
+    .task { margin-top:8px; overflow-wrap:anywhere; }
+    .badge { display:inline-block; padding:3px 9px; border-radius:99px; background:var(--line); font-size:12px; font-weight:650; }
+    .online { color:var(--green); } .offline { color:var(--red); } .warn { color:var(--amber); }
+    button, .button { min-height:42px; padding:9px 14px; border:1px solid var(--line); border-radius:9px;
+      color:var(--ink); background:var(--card); font:inherit; font-size:14px; cursor:pointer; text-decoration:none; }
+    button.primary, .button.primary { color:white; border-color:var(--accent); background:#4f46e5; }
+    button.danger { color:var(--red); } button:disabled { opacity:.55; cursor:wait; }
+    .actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+    .count { font-size:24px; font-weight:750; } .empty { text-align:center; color:var(--muted); }
+    .alert { padding:12px; border:1px solid var(--line); border-radius:10px; background:var(--card); }
+    #login { min-height:70vh; display:grid; place-items:center; } #login .card { width:min(100%,400px); text-align:center; }
+    .hidden { display:none!important; } .interaction { overflow-wrap:anywhere; } .interaction p { margin:8px 0; }
+    @media(max-width:480px) { header { padding-top:calc(12px + env(safe-area-inset-top)); } .desktop { display:none; } }
+  </style>
+  <script src="/panel.js" defer></script>
+</head>
+<body>
+  <section id="login" class="hidden">
+    <div class="card">
+      <h1>Monkey Store</h1>
+      <p class="muted">Panel remoto de agentes y dropshipping</p>
+      <p id="login-message" class="muted">Inicia sesión con la cuenta GitHub autorizada.</p>
+      <a id="login-link" class="button primary" href="/auth/github/login">Entrar con GitHub</a>
+    </div>
+  </section>
+  <div id="app" class="hidden">
+    <header>
+      <div><h1>Monkey Store</h1><div id="connection" class="muted">Conectando…</div></div>
+      <div class="actions">
+        <button id="refresh">Actualizar</button>
+        <button id="logout" class="desktop">Salir</button>
+      </div>
+    </header>
+    <main>
+      <section>
+        <h2>Agentes locales</h2>
+        <div class="card">
+          <div class="row"><strong>Servicio de dropshipping</strong><span id="service" class="badge">—</span></div>
+          <div id="ollama" class="muted" style="margin-top:6px">Ollama: —</div>
+          <div class="actions">
+            <button id="start" class="primary">Iniciar agentes</button>
+            <button id="stop" class="danger">Detener agentes</button>
+          </div>
+          <p id="command-status" class="muted"></p>
+        </div>
+        <div id="agents" class="grid" style="margin-top:10px"></div>
+      </section>
+      <section>
+        <h2>Modelos cargados en Ollama</h2><div id="models" class="grid"></div>
+      </section>
+      <section>
+        <h2>Atención de interacciones</h2><div id="queue" class="grid"></div>
+        <div id="reviews" class="grid" style="margin-top:10px"></div>
+      </section>
+      <p id="updated" class="muted"></p>
+      <p class="muted">Los modelos y agentes se ejecutan en tu Mac. Si el puente local está desconectado, los controles remotos no estarán disponibles.</p>
+    </main>
+  </div>
+</body>
+</html>

@@ -28,6 +28,7 @@ import urllib.request
 from datetime import datetime, timedelta
 
 import fuentes
+import interacciones
 import precios
 import redes
 from comun import (AGENTES, CONFIG, DATOS, LATIDOS, PRODUCTOS, RAIZ, Latido, ahora, chat_json,
@@ -608,6 +609,7 @@ def main() -> None:
         threading.Thread(target=bucle, args=("redactor", "Redacta anuncios de Marketplace", ciclo_redactor), daemon=True),
         threading.Thread(target=bucle, args=("publicista", "Publica en la Página y el Instagram de Monkey Store",
                                              ciclo_publicista), daemon=True),
+        threading.Thread(target=interacciones.bucle, args=(PARAR,), daemon=True),
     ]
     for h in hilos:
         h.start()

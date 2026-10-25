@@ -1,0 +1,17 @@
+{
+  "id": "/",
+  "name": "Monkey Store · Agentes",
+  "short_name": "Monkey Store",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#111827",
+  "theme_color": "#111827",
+  "icons": [
+    {
+      "src": "/panel-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
